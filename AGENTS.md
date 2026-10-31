@@ -12,6 +12,6 @@ Preserve the money representation, rounding results to two decimal places. Trans
 
 Distinguish queued, failed and provider-accepted email. Do not send live emails or charge cards in tests. Use environment secrets; demo credentials are fictional test fixtures.
 
-Git: retain original history, use main and the approved Joshua-Hebron-J/brightloop-backup remote. Never force-push or overwrite unrelated remote work. Verify before commits/pushes and record milestones at least hourly while actively developing. Ignore databases, .env, node_modules and dist. Continue independent local work if the remote is unavailable; report the blocker precisely.
+Git: retain original history, use main and the approved Joshua-Hebron-J/Subscription-Management-System-odooxkochi remote. Never force-push or overwrite unrelated remote work. Verify before commits/pushes and record milestones at least hourly while actively developing. Ignore databases, .env, node_modules and dist. Continue independent local work if the remote is unavailable; report the blocker precisely.
 
 Done means mandatory behavior is implemented, relevant tests/typechecks/lint/build pass, the financial journey is verified, selected browser checks and limits are documented, and README/DEMO_GUIDE/REQUIREMENTS/VERIFICATION match reality. Never call queued email delivered or simulated bookkeeping a live payment.

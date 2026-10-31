@@ -42,4 +42,4 @@ This is a hackathon prototype. Payments record bookkeeping and do not charge car
 
 One billing run handles at most 1,000 missed cycles per subscription; rerunning continues remaining backlog. Money retains the original decimal representation with explicit two-decimal rounding. There is no production accounting/tax certification.
 
-See DEMO_GUIDE.md and VERIFICATION.md. The intended GitHub remote is Joshua-Hebron-J/brightloop-backup on main. Original backend history is preserved; the frontend ZIP contained no Git history. Never force-push or commit databases, secrets, node_modules or dist.
+See DEMO_GUIDE.md and VERIFICATION.md. The intended GitHub remote is Joshua-Hebron-J/Subscription-Management-System-odooxkochi on main. Original backend history is preserved; the frontend ZIP contained no Git history. Never force-push or commit databases, secrets, node_modules or dist.
