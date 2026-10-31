@@ -1,0 +1,5 @@
+import React from 'react';
+import {Menu,LogOut} from 'lucide-react';
+import {useAuth} from '../../context/AuthContext';
+import {NavItemKey} from './Sidebar';
+export const Header:React.FC<{currentNav:NavItemKey;onOpenMobile:()=>void;isSidebarCollapsed:boolean}>=({currentNav,onOpenMobile,isSidebarCollapsed})=>{const{user,logout}=useAuth();return <header className={`fixed top-0 right-0 z-30 h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 ${isSidebarCollapsed?'left-0 lg:left-20':'left-0 lg:left-64'}`}><div className="flex gap-3 items-center"><button aria-label="Open navigation" onClick={onOpenMobile} className="lg:hidden"><Menu/></button><div><p className="text-xs text-slate-400">Brightloop / Workspace</p><h1 className="capitalize font-bold">{currentNav}</h1></div></div><div className="flex gap-4 items-center"><div className="text-right"><p className="text-sm font-semibold">{user?.name}</p><p className="text-xs text-slate-500">{(user as any)?.serverRole}</p></div><button aria-label="Sign out" onClick={logout} className="p-2 text-slate-500 hover:text-blue-600"><LogOut size={18}/></button></div></header>};

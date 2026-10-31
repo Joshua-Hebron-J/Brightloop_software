@@ -1,0 +1,44 @@
+import { dashboard } from './dashboard';
+﻿import { Request, Response, NextFunction, Router } from 'express';
+import { z } from 'zod';
+import { getDb } from '../../database/db';
+import { authenticate, authorize } from '../../middlewares/auth';
+import { HttpError } from '../../middlewares/errorHandler';
+import { generateId } from '../../utils/dateUtils';
+import { QuotesService } from '../quotes/quotes.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { InvoicesService } from '../invoices/invoices.service';
+import { sendMail } from './mail';
+import { checkPlan } from './policy';
+// This guard runs before every business router. Customer filters cannot be overridden by input.
+export function customerScope(req:Request,_res:Response,next:NextFunction) {
+ if(req.user?.role!=='CUSTOMER') return next();
+ const customerId=req.user.customerId;
+ if(!customerId) return next(new HttpError(403,'Customer account has no linked customer','FORBIDDEN'));
+ const parts=req.path.split('/').filter(Boolean),resource=parts[0],id=parts[1];
+ const tables:any={subscriptions:'subscriptions',invoices:'invoices',payments:'payments',quotes:'quotes',customers:'customers'};
+ if(resource==='portal') return next();
+ if((resource==='products'||resource==='plans') && req.method==='GET') return next();
+ if(!tables[resource]) return next(new HttpError(403,'Internal access only','FORBIDDEN'));
+ if(req.method!=='GET' && !(resource==='quotes' && parts[2]==='status' && ['ACCEPTED','REJECTED'].includes(req.body.status)) && !(resource==='subscriptions' && ['pause','resume','cancel','addons'].includes(parts[2]))) return next(new HttpError(403,'Action requires internal staff','FORBIDDEN'));
+ if(id){const r:any=getDb().prepare(`SELECT ${resource==='customers'?'id':'customer_id'} AS customer_id FROM ${tables[resource]} WHERE id=?`).get(id);if(!r||r.customer_id!==customerId)return next(new HttpError(404,'Record not found','NOT_FOUND'))}
+ else req.query.customerId=customerId;
+ if(resource==='customers' && !id) return next(new HttpError(403,'Customer directory is internal','FORBIDDEN'));
+ next();
+}
+const router=Router();router.use(authenticate);
+const wrap=(fn:any)=>(req:Request,res:Response,next:NextFunction)=>Promise.resolve().then(()=>fn(req,res)).catch(next);
+router.get('/dashboard',authorize('ADMIN','BILLING_MANAGER','SALES_REP','VIEWER'),wrap((req:Request,res:Response)=>res.json({success:true,data:dashboard(req.query)})));
+const ruleSchema=z.object({name:z.string().min(1),kind:z.enum(['FIXED','PERCENTAGE']),value:z.number().nonnegative(),minimum_purchase:z.number().nonnegative().default(0),minimum_quantity:z.number().int().positive().default(1),starts_at:z.string().datetime(),ends_at:z.string().datetime(),usage_limit:z.number().int().positive(),product_id:z.string().nullable().optional(),subscription_id:z.string().nullable().optional()}).refine(d=>d.ends_at>=d.starts_at,'End must follow start').refine(d=>d.kind!=='PERCENTAGE'||d.value<=100,'Percentage must not exceed 100');
+router.get('/rules',authorize('ADMIN','BILLING_MANAGER','SALES_REP','VIEWER'),wrap((_req:Request,res:Response)=>res.json({success:true,data:{taxes:getDb().prepare('SELECT * FROM tax_rules').all(),discounts:getDb().prepare('SELECT * FROM discount_rules').all()}})));
+router.post('/taxes',authorize('ADMIN'),wrap((req:Request,res:Response)=>{const d=z.object({name:z.string().min(1),rate:z.number().min(0).max(100),product_id:z.string().nullable().optional()}).parse(req.body);const id=generateId('tax');getDb().prepare('INSERT INTO tax_rules(id,name,rate,product_id) VALUES(?,?,?,?)').run(id,d.name,d.rate,d.product_id||null);res.status(201).json({success:true,data:{id,...d}})}));
+router.post('/discounts',authorize('ADMIN'),wrap((req:Request,res:Response)=>{const d=ruleSchema.parse(req.body),id=generateId('discount');getDb().prepare('INSERT INTO discount_rules(id,name,kind,value,minimum_purchase,minimum_quantity,starts_at,ends_at,usage_limit,product_id,subscription_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(id,d.name,d.kind,d.value,d.minimum_purchase,d.minimum_quantity,d.starts_at,d.ends_at,d.usage_limit,d.product_id||null,d.subscription_id||null);res.status(201).json({success:true,data:{id,...d}})}));
+router.delete('/rules/:kind/:id',authorize('ADMIN'),wrap((req:Request,res:Response)=>{const table=req.params.kind==='tax'?'tax_rules':'discount_rules';getDb().prepare(`UPDATE ${table} SET active=0 WHERE id=?`).run(String(req.params.id));res.json({success:true,data:{disabled:true}})}));
+const item=z.object({productId:z.string().nullable().optional(),variantId:z.string().nullable().optional(),description:z.string().min(1),quantity:z.number().int().positive(),unitPrice:z.number().nonnegative(),taxRatePercent:z.number().min(0).max(100).default(0),discountPercent:z.number().min(0).max(100).default(0)});
+router.get('/templates',authorize('ADMIN','BILLING_MANAGER','SALES_REP','VIEWER'),wrap((_req:Request,res:Response)=>res.json({success:true,data:getDb().prepare('SELECT * FROM quotation_templates').all().map((r:any)=>({...r,items:JSON.parse(r.items)}))})));
+router.post('/templates',authorize('ADMIN','SALES_REP'),wrap((req:Request,res:Response)=>{const d=z.object({name:z.string().min(1),planId:z.string(),validityDays:z.number().int().positive(),items:z.array(item).min(1)}).parse(req.body),id=generateId('template');getDb().prepare('INSERT INTO quotation_templates VALUES(?,?,?,?,?)').run(id,d.name,d.planId,d.validityDays,JSON.stringify(d.items));res.status(201).json({success:true,data:{id,...d}})}));
+router.post('/templates/:id/quote',authorize('ADMIN','SALES_REP','BILLING_MANAGER'),wrap((req:Request,res:Response)=>{const t:any=getDb().prepare('SELECT * FROM quotation_templates WHERE id=?').get(String(req.params.id));if(!t)throw new HttpError(404,'Template not found','NOT_FOUND');const {customerId}=z.object({customerId:z.string()}).parse(req.body);const q=QuotesService.createQuote(req.user!.id,{customerId,planId:t.plan_id,validUntil:new Date(Date.now()+t.validity_days*86400000).toISOString(),items:JSON.parse(t.items)});res.status(201).json({success:true,data:q})}));
+router.get('/mail',authorize('ADMIN'),wrap((_req:Request,res:Response)=>res.json({success:true,data:getDb().prepare('SELECT * FROM mail_outbox ORDER BY created_at DESC LIMIT 50').all()})));
+router.post('/invoices/:id/send',authorize('ADMIN','BILLING_MANAGER'),wrap(async(req:Request,res:Response)=>{const inv=InvoicesService.getInvoiceById(String(req.params.id));const c:any=getDb().prepare('SELECT email FROM customers WHERE id=?').get(inv.customerId);const result=await sendMail(c.email,`Brightloop invoice ${inv.invoiceNumber}`,`Invoice ${inv.invoiceNumber}: ${inv.currency} ${inv.totalAmount.toFixed(2)}. Due ${inv.dueDate}. Please sign in to your Brightloop portal to view your invoice.`);res.json({success:true,data:result})}));
+router.post('/subscriptions/:id/transition',authorize('ADMIN','BILLING_MANAGER','SALES_REP'),wrap((req:Request,res:Response)=>{const {status}=z.object({status:z.enum(['QUOTATION','CONFIRMED','ACTIVE'])}).parse(req.body),db=getDb();const sub:any=db.prepare('SELECT * FROM subscriptions WHERE id=?').get(String(req.params.id));if(!sub)throw new HttpError(404,'Subscription not found','NOT_FOUND');const transitions:any={DRAFT:'QUOTATION',QUOTATION:'CONFIRMED',CONFIRMED:'ACTIVE'};if(transitions[sub.status]!==status)throw new HttpError(400,'Invalid subscription transition','INVALID_TRANSITION');const plan:any=db.prepare('SELECT * FROM subscription_plans WHERE id=?').get(sub.plan_id);checkPlan(plan,new Date().toISOString());db.prepare('UPDATE subscriptions SET status=?,updated_at=? WHERE id=?').run(status,new Date().toISOString(),sub.id);res.json({success:true,data:SubscriptionsService.getSubscriptionById(sub.id)})}));
+export default router;

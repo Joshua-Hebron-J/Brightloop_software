@@ -1,0 +1,3 @@
+import React from 'react';
+
+export function ListPager({page,total,onChange}:{page:number;total:number;onChange:(n:number)=>void}){return <div className="flex items-center justify-between text-xs text-slate-500"><span>{total} records · Page {page} of {Math.max(1,Math.ceil(total/100))} · Filters search this page</span><div className="flex gap-3"><button disabled={page===1} className="border rounded px-3 py-1 disabled:opacity-40" onClick={()=>onChange(page-1)}>Previous</button><button disabled={page*100>=total} className="border rounded px-3 py-1 disabled:opacity-40" onClick={()=>onChange(page+1)}>Next</button></div></div>}

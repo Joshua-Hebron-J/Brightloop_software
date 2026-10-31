@@ -1,0 +1,1 @@
+const {spawnSync}=require('node:child_process');const fs=require('node:fs');const files=fs.readdirSync('src/tests').filter(f=>f.endsWith('.test.ts')).map(f=>'src/tests/'+f);const r=spawnSync(process.execPath,['node_modules/tsx/dist/cli.mjs','--test',...files],{stdio:'inherit',env:{...process.env,DATABASE_PATH:':memory:',NODE_ENV:'test'}});process.exit(r.status??1);

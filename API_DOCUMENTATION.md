@@ -1,129 +1,50 @@
-# Brightloop Backend API Documentation
-**Version:** 1.0.0  
-**Coordinated For:** Lakshitha (Frontend) & Integration Teams  
-**Shared Type Definitions:** [`shared/types.ts`](../shared/types.ts)
+# Integrated API
 
----
+All routes return `{success,data}` or `{success:false,error:{code,message,details}}`. Business endpoints require `Authorization: Bearer <token>`. List results contain `items,total,page,limit,totalPages`; page size is at most 100. See backend source schemas for exact optional fields.
 
-## 🚀 Quick Start
+## Authentication
 
-### 1. Development Server
-```bash
-npm install
-npm run db:migrate   # Applies SQL schema migrations
-npm run db:seed      # Seeds demo users, plans, products, quotes, and customers
-npm run dev          # Starts TypeScript server on http://localhost:4000
-```
+- POST /api/auth/register: email, password, firstName, lastName. Always customer access.
+- POST /api/auth/login: email, password. Returns user, token, refreshToken.
+- POST /api/auth/refresh: refreshToken; rotates the token.
+- GET /api/auth/me: current authenticated user, including linked customerId.
+- POST /api/auth/logout: revokes this user's sessions.
+- POST /api/auth/change-password: currentPassword, newPassword.
+- POST /api/auth/forgot-password: email. Queues recovery; never returns a token to the requester.
+- POST /api/auth/reset-password: token, password. Single use, 30-minute expiry.
+- POST /api/auth/staff: Admin only; names/email/password/role (BILLING_MANAGER, SALES_REP or VIEWER).
+- GET /api/auth/users: Admin only.
 
-### 2. Run Tests & Validation
-```bash
-npm run typecheck    # Strict TypeScript check (0 errors)
-npm test             # Full integration test suite (37/37 passing)
-npm run build        # Production compile to dist/
-npm start            # Run compiled production server
-```
+## Existing modules
 
----
+GET/POST /api/products, /api/plans, /api/customers, /api/quotes, /api/subscriptions, /api/invoices, /api/payments. Detail GET /:id. Catalog/customer updates use PUT /:id. Server role checks restrict all writes independently of the UI. Customer lists and direct IDs are scoped to the signed-in customer; customer-supplied customerId filters cannot override ownership.
 
-## 👥 Pre-seeded Test Accounts
+Products include productType/salesPrice/costPrice and variants; variant prices have unitPrice and priceExtra. Plans support DAILY, WEEKLY, MONTHLY, QUARTERLY, SEMI_ANNUALLY and ANNUALLY; productId, minimumQuantity, availableFrom/Until, allowPause/Close/Renew and autoClose.
 
-All accounts share the default password: **`Password123!`**
+## Workflows
 
-| Email | Role | Permissions |
-|---|---|---|
-| `admin@brightloop.io` | **ADMIN** | Full system access, user management, plan & product lifecycle, payment overrides |
-| `billing@brightloop.io` | **BILLING_MANAGER** | Invoicing, payments, billing cycles, refunds, plan/product creation |
-| `sales@brightloop.io` | **SALES_REP** | Customer onboarding, quotes creation & conversion, subscription initiation |
-| `viewer@brightloop.io` | **VIEWER** | Read-only access to catalog, analytics, invoices, and subscriptions |
+- PATCH /api/quotes/:id/status: DRAFT -> PENDING_APPROVAL -> APPROVED -> ACCEPTED; rejection supported before conversion.
+- POST /api/quotes/:id/convert: once, accepted and unexpired only. Returns subscription identifiers; billing creates the invoice.
+- POST /api/official/subscriptions/:id/transition: QUOTATION, CONFIRMED or ACTIVE, sequentially from Draft.
+- POST /api/subscriptions/:id/pause, /resume, /cancel, /change-plan.
+- POST /api/subscriptions/:id/addons: variantId, quantity. Zero removes an add-on; unitPrice plus priceExtra is persisted. Authorized customers may manage their own add-ons.
+- POST /api/billing/run-cycles: targetDate (ISO), optional subscriptionIds and dryRun. Returns generated/skipped/cancelled counts and per-subscription results.
+- POST /api/billing/subscriptions/:id/generate-cycle: generate a due cycle; date inputs validated.
+- PATCH /api/invoices/:id/status: OPEN confirms, VOID cancels. Paid invoices are settled through payment recording, not arbitrary status changes.
+- GET /api/invoices/:id/html: authenticated printable HTML, with escaped text and customer ownership enforcement.
+- POST /api/official/invoices/:id/send: queues or sends to the invoice customer's registered email.
+- POST /api/payments: customerId, invoiceId, amount, paymentMethod, paymentDate, transactionReference, notes. Repeated identical references are idempotent; mismatched reuse conflicts.
+- POST /api/payments/apply-credit: invoiceId, amount.
+- POST /api/payments/:id/refund: reason. Full local refund bookkeeping; no external funds transfer.
 
----
+## Official setup and reports
 
-## 📡 API Endpoints Overview
+- GET /api/official/rules; POST /api/official/taxes or /discounts; DELETE /api/official/rules/tax/:id or /discount/:id disables a rule. Writes require Admin.
+- Taxes: name, rate, optional product_id.
+- Discounts: name, kind (FIXED/PERCENTAGE), value, minimum_purchase, minimum_quantity, starts_at, ends_at, usage_limit, optional product_id/subscription_id. Active rules apply automatically and usage is consumed only in the committed invoice transaction.
+- GET/POST /api/official/templates: name, planId, validityDays, items.
+- POST /api/official/templates/:id/quote: customerId.
+- GET /api/official/mail: Admin-only local delivery queue, including demo recovery links.
+- GET /api/official/dashboard?from=ISO&to=ISO: current subscription/receivable metrics; date-filtered cash receipts, history, methods, distribution and aging.
 
-All protected routes expect the HTTP header:
-`Authorization: Bearer <JWT_ACCESS_TOKEN>`
-
-### 1. Authentication (`/api/auth`)
-- `POST /api/auth/login`: Authenticate with email & password. Returns JWT token, refresh token, and user profile.
-- `POST /api/auth/register`: Create a new user account.
-- `POST /api/auth/refresh`: Rotate refresh token and get a new access token.
-- `GET /api/auth/me`: Retrieve current authenticated user profile.
-- `POST /api/auth/change-password`: Update account password.
-- `GET /api/auth/users`: List all platform users *(Admin only)*.
-
-### 2. Products & Variants (`/api/products`)
-- `GET /api/products`: List products with pagination, search, status, and category filters.
-- `GET /api/products/:id`: Get product details and associated variants.
-- `POST /api/products`: Create a product with optional nested variants *(Admin, Billing Manager)*.
-- `PUT /api/products/:id`: Update product attributes.
-- `DELETE /api/products/:id`: Delete product *(Admin)*.
-- `POST /api/products/:id/variants`: Add a new variant (SKU, attributes JSON, unit price).
-- `PUT /api/products/variants/:variantId`: Update variant.
-- `DELETE /api/products/variants/:variantId`: Delete variant.
-
-### 3. Subscription Plans (`/api/plans`)
-- `GET /api/plans/frequencies`: Metadata of supported frequencies (`WEEKLY`, `MONTHLY`, `QUARTERLY`, `SEMI_ANNUALLY`, `ANNUALLY`).
-- `GET /api/plans`: List active or archived subscription plans.
-- `GET /api/plans/:id`: Retrieve single plan.
-- `POST /api/plans`: Create subscription plan with price, setup fee, trial days, and features *(Admin, Billing Manager)*.
-- `PUT /api/plans/:id`: Update plan.
-- `DELETE /api/plans/:id`: Delete plan (prevented if active subscriptions exist).
-
-### 4. Customers (`/api/customers`)
-- `GET /api/customers`: Paginated customer search with outstanding balance calculation.
-- `GET /api/customers/:id`: Customer details including active subscriptions and recent invoices.
-- `POST /api/customers`: Create customer (`INDIVIDUAL` or `ORGANIZATION`) with billing and shipping address.
-- `PUT /api/customers/:id`: Update customer details.
-- `POST /api/customers/:id/adjust-credit`: Add or deduct customer store credit balance.
-- `DELETE /api/customers/:id`: Delete customer *(Admin)*.
-
-### 5. Quotations & Conversion (`/api/quotes`)
-- `GET /api/quotes`: List quotes with customer, line items, and status.
-- `GET /api/quotes/:id`: Get quote details.
-- `POST /api/quotes`: Create quote with percentage/fixed discount, line item tax rates, and terms.
-- `PATCH /api/quotes/:id/status`: Update status (`DRAFT` ➔ `PENDING_APPROVAL` ➔ `APPROVED` ➔ `ACCEPTED` / `REJECTED`).
-- `POST /api/quotes/:id/convert`: **One-click conversion** of an approved quote into an active subscription and initial invoice.
-
-### 6. Subscription Lifecycle (`/api/subscriptions`)
-- `GET /api/subscriptions`: List subscriptions with plan, status, and renewal dates.
-- `GET /api/subscriptions/:id`: Get subscription with itemized breakdown and billing cycles history.
-- `POST /api/subscriptions`: Create subscription (handles trial periods and billing frequency calculation).
-- `POST /api/subscriptions/:id/pause`: Temporarily pause active subscription.
-- `POST /api/subscriptions/:id/resume`: Resume paused subscription (automatically extends period end by the pause duration).
-- `POST /api/subscriptions/:id/cancel`: Cancel immediately or mark `cancelAtPeriodEnd: true`.
-- `POST /api/subscriptions/:id/change-plan`: Upgrade/downgrade subscription with real-time proration calculation and automatic invoice generation.
-
-### 7. Billing Engine & Duplicate Prevention (`/api/billing`)
-- `GET /api/billing/cycles`: List billing cycles and cycle statuses.
-- `GET /api/billing/cycles/:id`: Get cycle details.
-- `POST /api/billing/run-cycles`: Run automated batch billing cycle engine across all due subscriptions. Supports `dryRun: true` for previewing charges without committing.
-- `POST /api/billing/subscriptions/:subscriptionId/generate-cycle`: Generate next cycle for a specific subscription. Guaranteed idempotent using `idempotencyKey` and database constraints.
-
-### 8. Invoices, Taxes & Discounts (`/api/invoices`)
-- `GET /api/invoices`: List invoices by customer, subscription, status, or date.
-- `GET /api/invoices/:id`: Get invoice with line items, tax breakdowns, discount calculations, and payment history.
-- `GET /api/invoices/:id/html`: Render printable, client-ready HTML invoice with status badges and branding.
-- `POST /api/invoices`: Create manual ad-hoc invoice with custom line items, tax types (`SALES_TAX`, `VAT`, `GST`, `ZERO_RATED`), and discounts.
-- `PATCH /api/invoices/:id/status`: Void or mark invoice uncollectible.
-
-### 9. Payment Recording & Reconciliations (`/api/payments`)
-- `GET /api/payments`: List recorded payments and transaction references.
-- `GET /api/payments/:id`: Get payment details.
-- `POST /api/payments`: Record payment.
-  - Full payment: marks invoice as `PAID`.
-  - Partial payment: marks invoice as `PARTIALLY_PAID` and reduces `balanceDue`.
-  - Overpayment: clears invoice balance and credits remaining amount to `customer.creditBalance`.
-- `POST /api/payments/apply-credit`: Use available customer store credit to pay down an open invoice.
-- `POST /api/payments/:id/refund`: Refund a payment and reverse applied invoice balances.
-
-### 10. Dashboard Analytics (`/api/analytics`)
-- `GET /api/analytics/dashboard`:
-  - `mrr`: Normalized Monthly Recurring Revenue
-  - `arr`: Annual Recurring Revenue (`mrr * 12`)
-  - `activeSubscriptionsCount`: Active subscriber volume
-  - `totalCustomersCount`: Customer base count
-  - `totalOutstandingAr`: Total Accounts Receivable
-  - `arAging`: Aging buckets (0–30 days, 31–60 days, 61–90 days, 90+ days)
-  - `revenueByMonth`: Historical collections trend
-  - `subscriptionStatusDistribution`: Breakdown by status
-  - `recentActivity`: Unified real-time event feed
+SMTP or webhook credentials enable external email. Without them, delivered=false and the queue retains the message. No real gateway processing is implemented.
