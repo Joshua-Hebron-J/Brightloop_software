@@ -7,6 +7,7 @@ Executed locally on 31 October 2026 using Node 24.16.0.
 - Backend and frontend TypeScript checks: passed.
 - ESLint checks for unreachable code, duplicate keys/cases/arguments, unsafe finally, constant conditions, conditional assignments and typeof validity: passed.
 - Backend production build and Vite production build: passed. Vite reports a non-blocking chart chunk size warning (about 547 KB uncompressed, 155 KB gzip).
+- Production runtime: npm start served API health=ok and SPA HTTP 200; live production analytics rendered in the browser.
 - Empty development database: all four migrations applied, seed initialized, backend health endpoint started.
 - Browser: real admin login, responsive navigation, product form submission and persisted product listing verified. Other screen checks are recorded as performed; the complete financial journey is covered at HTTP level, not claimed as a full browser E2E run.
 
