@@ -59,7 +59,8 @@ test('Customers can only read their own records; direct URLs, filters and mutati
  assert.equal((await call('post','/subscriptions/'+subId+'/resume',customer,{})).status,200);
 });
 test('Draft lifecycle follows Draft → Quotation → Confirmed → Active, with invalid transitions rejected',async()=>{
- const r=await call('post','/subscriptions',admin,{customerId,planId:'plan_starter_monthly',startTrial:false});assert.equal(r.status,201);const id=r.body.data.id;assert.equal(r.body.data.status,'DRAFT');
+ const fixture=await call('post','/plans',admin,{name:'INR lifecycle',code:'INR-LIFE',currency:'INR',billingFrequency:'MONTHLY',price:999});
+ const r=await call('post','/subscriptions',admin,{customerId,planId:fixture.body.data.id,startTrial:false});assert.equal(r.status,201);const id=r.body.data.id;assert.equal(r.body.data.status,'DRAFT');
  assert.equal((await call('post','/official/subscriptions/'+id+'/transition',admin,{status:'ACTIVE'})).status,400);
  for(const status of ['QUOTATION','CONFIRMED','ACTIVE'])assert.equal((await call('post','/official/subscriptions/'+id+'/transition',admin,{status})).status,200);
 });

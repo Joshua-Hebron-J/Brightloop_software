@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import React, { useEffect, useState } from 'react';
 import {
   Repeat,
@@ -104,7 +105,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             Welcome back, {user?.name || 'Sarah Connor'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
-            Manage your Brightloop cloud subscription, view itemized tax invoices, and review new proposal quotations.
+            Manage your BillSync cloud subscription, view itemized tax invoices, and review new proposal quotations.
           </p>
         </div>
 
@@ -115,7 +116,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-md shadow-emerald-600/30 transition-colors flex items-center gap-1.5"
             >
               <CreditCard className="w-4 h-4" />
-              <span>Pay Outstanding (${outstandingBalance.toFixed(2)})</span>
+              <span>Pay Outstanding ({formatMoney(outstandingBalance,'INR')})</span>
             </button>
           ) : (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
@@ -180,7 +181,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             <AlertCircle className={`w-4 h-4 ${outstandingBalance > 0 ? 'text-amber-500' : 'text-emerald-500'}`} />
           </div>
           <p className={`mt-3 text-2xl font-bold ${outstandingBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-            ${outstandingBalance.toFixed(2)}
+            {formatMoney(outstandingBalance,'INR')}
           </p>
           <p className="mt-2 text-xs text-slate-500">
             {unpaidInvoices.length} unpaid bill{unpaidInvoices.length === 1 ? '' : 's'}
@@ -214,7 +215,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     <p className="text-[11px] text-slate-400 mt-0.5">Valid until {quote.validityDate}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-base font-bold text-slate-900">${quote.total.toFixed(2)}</span>
+                    <span className="text-base font-bold text-slate-900">{formatMoney(quote.total,'INR')}</span>
                     <button
                       onClick={() => handleAcceptQuote(quote)}
                       className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
@@ -265,8 +266,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     <p className="text-[11px] text-slate-500">{sub.planName} (Qty: {sub.quantity})</p>
                   </td>
                   <td className="py-3 px-3 capitalize">{sub.billingFrequency}</td>
-                  <td className="py-3 px-3 font-semibold text-slate-900">${sub.amount.toFixed(2)}</td>
-                  <td className="py-3 px-3 text-slate-600">{sub.nextBillingDate}</td>
+                  <td className="py-3 px-3 font-semibold text-slate-900">{formatMoney(sub.amount,sub.currency)}</td>
+                  <td className="py-3 px-3 text-slate-600">{formatDate(sub.nextBillingDate)}</td>
                   <td className="py-3 px-3">
                     <StatusBadge status={sub.status} size="sm" />
                   </td>
@@ -303,11 +304,11 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     <StatusBadge status={inv.status} size="sm" />
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Issued: {inv.invoiceDate} • Due: {inv.dueDate}
+                    Issued: {formatDate(inv.invoiceDate)} • Due: {formatDate(inv.dueDate)}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-bold text-slate-900">${inv.totalAmount.toFixed(2)}</span>
+                  <span className="font-bold text-slate-900">{formatMoney(inv.totalAmount,inv.currency)}</span>
                   <button
                     onClick={() => setSelectedInvoiceForPrint(inv)}
                     className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors"
@@ -346,8 +347,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-emerald-600">${pay.amount.toFixed(2)}</p>
-                  <p className="text-[10px] text-slate-400">{pay.paymentDate}</p>
+                  <p className="font-bold text-emerald-600">{formatMoney(pay.amount,'INR')}</p>
+                  <p className="text-[10px] text-slate-400">{formatDate(pay.paymentDate)}</p>
                 </div>
               </div>
             ))}

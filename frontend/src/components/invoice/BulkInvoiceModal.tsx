@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import {formatMoney,formatDate} from '../../utils/format';
+import React, { useState,useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Subscription } from '../../types';
 import { billingApi } from '../../services/api';
@@ -28,6 +29,7 @@ export const BulkInvoiceModal: React.FC<BulkInvoiceModalProps> = ({
   const [status, setStatus] = useState<'Draft' | 'Confirmed'>('Confirmed');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  useEffect(()=>{if(isOpen)setSelectedSubIds(subscriptions.filter(s=>['Active','Trial'].includes(s.status)).map(s=>s.id))},[isOpen,subscriptions]);
   const toggleSelectAll = () => {
     if (selectedSubIds.length === eligibleSubs.length) {
       setSelectedSubIds([]);
@@ -75,7 +77,7 @@ export const BulkInvoiceModal: React.FC<BulkInvoiceModalProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-lg">
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Billing target date</label>
-            <input
+            <input aria-label="Billing target date"
               type="date"
               value={invoiceDate}
               onChange={(e) => setInvoiceDate(e.target.value)}
@@ -134,7 +136,7 @@ export const BulkInvoiceModal: React.FC<BulkInvoiceModalProps> = ({
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-slate-900">${sub.amount.toFixed(2)}</p>
+                    <p className="font-bold text-slate-900">{formatMoney(sub.amount,sub.currency)}</p>
                     <p className="text-[10px] text-slate-400 capitalize">{sub.billingFrequency}</p>
                   </div>
                 </div>
@@ -146,15 +148,7 @@ export const BulkInvoiceModal: React.FC<BulkInvoiceModalProps> = ({
         {/* Footer actions */}
         <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
           <span className="text-slate-500">
-            Total Batch Est:{' '}
-            <strong className="text-slate-900 font-bold">
-              $
-              {eligibleSubs
-                .filter((s) => selectedSubIds.includes(s.id))
-                .reduce((sum, s) => sum + s.amount * 1.18, 0)
-                .toFixed(2)}{' '}
-              (incl. 18% tax)
-            </strong>
+            Invoice totals use each subscription's saved discounts, currency and configured tax rules. Not-yet-due cycles are skipped.
           </span>
 
           <div className="flex gap-2">

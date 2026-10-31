@@ -15,7 +15,7 @@ export const createQuoteSchema = z.object({
   planId: z.string().optional().nullable(),
   issueDate: z.string().optional(),
   validUntil: z.string().min(1, 'Valid until date is required'),
-  currency: z.string().default('USD'),
+  currency: z.enum(['INR','USD','EUR','GBP']).optional(),
   discountType: z.enum(['PERCENTAGE', 'FIXED']).default('PERCENTAGE'),
   discountValue: z.number().nonnegative().default(0),
   taxRatePercent: z.number().min(0).max(100).optional(),

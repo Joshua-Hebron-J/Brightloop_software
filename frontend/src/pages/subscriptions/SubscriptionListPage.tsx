@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import {ListPager} from '../../components/common/ListPager';
 import {NewSubscription} from '../../components/common/Operations';
 import React, { useEffect, useState } from 'react';
@@ -179,8 +180,8 @@ export const SubscriptionListPage: React.FC = () => {
                       </p>
                     </td>
                     <td className="py-3.5 px-4 capitalize text-slate-700">{sub.billingFrequency}</td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">${sub.amount.toFixed(2)}</td>
-                    <td className="py-3.5 px-4 text-slate-600">{sub.nextBillingDate}</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">{formatMoney(sub.amount,sub.currency)}</td>
+                    <td className="py-3.5 px-4 text-slate-600">{formatDate(sub.nextBillingDate)}</td>
                     <td className="py-3.5 px-4">
                       <StatusBadge status={sub.status} size="sm" />
                     </td>

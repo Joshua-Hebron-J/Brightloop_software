@@ -1,0 +1,2 @@
+ALTER TABLE products ADD COLUMN currency TEXT NOT NULL DEFAULT 'USD';
+ALTER TABLE subscription_items ADD COLUMN discount_percent REAL NOT NULL DEFAULT 0;

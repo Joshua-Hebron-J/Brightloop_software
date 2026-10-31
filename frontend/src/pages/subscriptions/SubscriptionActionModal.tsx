@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import React, { useState } from 'react';
 import { Modal } from '../../components/common/Modal';
 import { Subscription } from '../../types';
@@ -67,7 +68,7 @@ export const SubscriptionActionModal: React.FC<SubscriptionActionModalProps> = (
         {action === 'activate' && (
           <p className="text-slate-600">
             Confirm activation for <strong className="text-slate-900">{subscription.customerName}</strong> on the{' '}
-            <strong>{subscription.planName}</strong> plan (${subscription.amount.toFixed(2)}/mo). This will transition status from{' '}
+            <strong>{subscription.planName}</strong> plan ({formatMoney(subscription.amount,subscription.currency)}/mo). This will transition status from{' '}
             <span className="font-semibold">{subscription.status}</span> to <span className="text-emerald-600 font-semibold">Active</span>.
           </p>
         )}
@@ -75,7 +76,7 @@ export const SubscriptionActionModal: React.FC<SubscriptionActionModalProps> = (
         {action === 'pause' && (
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Pause Reason / Feedback</label>
-            <select
+            <select aria-label="Pause Reason / Feedback"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white mb-2"
@@ -114,7 +115,7 @@ export const SubscriptionActionModal: React.FC<SubscriptionActionModalProps> = (
               Closing this subscription will immediately cease recurring billing and revoke platform license access.
             </p>
             <label className="block text-slate-700 font-semibold mb-1">Cancellation / Churn Reason</label>
-            <select
+            <select aria-label="Cancellation / Churn Reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"

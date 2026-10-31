@@ -1,3 +1,5 @@
+import {priceLines} from '../../../shared/money';
+import {gstSnapshot,configuredRate} from '../official/gst';
 import { checkPlan } from '../official/policy';
 import { getDb } from '../../database/db';
 import { HttpError } from '../../middlewares/errorHandler';
@@ -131,7 +133,7 @@ export class QuotesService {
     }[];
   }): Quote {
     const db = getDb();
-    const customer = db.prepare('SELECT id FROM customers WHERE id = ?').get(data.customerId);
+    const customer:any = db.prepare('SELECT * FROM customers WHERE id = ?').get(data.customerId);
     if (!customer) {
       throw new HttpError(404, 'Customer not found', 'CUSTOMER_NOT_FOUND');
     }
@@ -147,7 +149,8 @@ export class QuotesService {
     const quoteNumber = generateFormattedNumber('QUO');
     const now = new Date().toISOString();
     const issueDate = data.issueDate || now;
-    const currency = data.currency || 'USD';
+    const currency = data.currency || customer.currency || 'INR';
+    if(currency!==customer.currency)throw new HttpError(400,'Quotation currency must match customer','CURRENCY_MISMATCH');
     const discountType: DiscountType = data.discountType || 'PERCENTAGE';
     const discountValue = data.discountValue || 0;
 
@@ -200,9 +203,16 @@ export class QuotesService {
     }
     overallDiscountAmount = Number(overallDiscountAmount.toFixed(2));
 
-    const totalAmount = Number(Math.max(0, subtotal - overallDiscountAmount + totalTax).toFixed(2));
+    let totalAmount = Number(Math.max(0, subtotal - overallDiscountAmount + totalTax).toFixed(2));
+    let snapshot:any=null;
+    if(currency==='INR'){
+      const priced=priceLines(data.items.map(i=>({...i,taxRatePercent:configuredRate(i.productId||undefined,currency,i.taxRatePercent||0)})),discountType,discountValue);
+      subtotal=priced.subtotal;overallDiscountAmount=priced.discount;totalTax=priced.tax;totalAmount=priced.total;
+      processedItems.forEach((i,index)=>{i.taxRatePercent=priced.lines[index].taxRatePercent||0;i.lineTotal=priced.lines[index].lineTotal});
+      snapshot=gstSnapshot(data.customerId,currency,priced.lines);
+    }
 
-    db.exec('BEGIN TRANSACTION;');
+    db.exec('SAVEPOINT quote_write;');
     try {
       db.prepare(`
         INSERT INTO quotes (
@@ -253,14 +263,19 @@ export class QuotesService {
         );
       }
 
-      db.exec('COMMIT;');
+      if(snapshot)db.prepare('UPDATE quotes SET gst_snapshot=? WHERE id=?').run(JSON.stringify(snapshot),quoteId);
+      db.exec('RELEASE quote_write;');
       return this.getQuoteById(quoteId);
     } catch (err) {
-      db.exec('ROLLBACK;');
+      db.exec('ROLLBACK TO quote_write; RELEASE quote_write;');
       throw err;
     }
   }
 
+  static updateQuote(id:string,userId:string,data:Parameters<typeof QuotesService.createQuote>[1]){
+    const db=getDb(),old=this.getQuoteById(id);if(old.status!=='DRAFT')throw new HttpError(400,'Only draft quotations can be edited','QUOTE_LOCKED');
+    db.exec('SAVEPOINT quote_edit');try{const temp=this.createQuote(userId,data);const row:any=db.prepare('SELECT * FROM quotes WHERE id=?').get(temp.id);const keys=['customer_id','plan_id','issue_date','valid_until','currency','subtotal','discount_type','discount_value','discount_amount','tax_amount','total_amount','notes','terms','gst_snapshot'];db.prepare('UPDATE quotes SET '+keys.map(k=>k+'=?').join(',')+',updated_at=? WHERE id=?').run(...keys.map(k=>row[k]),new Date().toISOString(),id);db.prepare('DELETE FROM quote_items WHERE quote_id=?').run(id);db.prepare('UPDATE quote_items SET quote_id=? WHERE quote_id=?').run(id,temp.id);db.prepare('DELETE FROM quotes WHERE id=?').run(temp.id);db.exec('RELEASE quote_edit');return this.getQuoteById(id)}catch(e){db.exec('ROLLBACK TO quote_edit; RELEASE quote_edit');throw e}
+  }
   static updateQuoteStatus(id: string, newStatus: QuoteStatus, _reason?: string): Quote {
     const db = getDb();
     const existing = db.prepare('SELECT status FROM quotes WHERE id = ?').get(id) as any;
@@ -303,6 +318,7 @@ export class QuotesService {
       throw new HttpError(404, 'Selected plan not found', 'PLAN_NOT_FOUND');
     }
 
+    if(plan.currency!==quote.currency)throw new HttpError(400,'Plan and quote currencies differ','CURRENCY_MISMATCH');
     const start = options?.startDate ? new Date(options.startDate) : new Date();
     const periodStart = start.toISOString();
     const periodEnd = addBillingPeriod(start, plan.billing_frequency).toISOString();
@@ -315,7 +331,7 @@ export class QuotesService {
     const invNumber = generateFormattedNumber('INV');
     const now = new Date().toISOString();
 
-    db.exec('BEGIN TRANSACTION;');
+    db.exec('SAVEPOINT quote_write;');
     try {
       // 1. Create Subscription
       db.prepare(`
@@ -359,7 +375,7 @@ export class QuotesService {
       db.prepare('UPDATE subscription_items SET is_base=1 WHERE id=(SELECT id FROM subscription_items WHERE subscription_id=? ORDER BY rowid LIMIT 1)').run(subId);
       db.prepare('UPDATE subscriptions SET expiry_date=? WHERE id=?').run(plan.available_until||null,subId);
       const rows:any[]=db.prepare('SELECT id FROM subscription_items WHERE subscription_id=? ORDER BY rowid').all(subId);
-      rows.forEach((r,i)=>db.prepare('UPDATE subscription_items SET product_id=?,tax_rate_percent=?,unit_price=? WHERE id=?').run(quote.items[i].productId||plan.product_id||null,quote.items[i].taxRatePercent,Number((quote.items[i].unitPrice*(1-quote.items[i].discountPercent/100)).toFixed(2)),r.id));
+      rows.forEach((r,i)=>db.prepare('UPDATE subscription_items SET product_id=?,tax_rate_percent=?,unit_price=?,discount_percent=? WHERE id=?').run(quote.items[i].productId||plan.product_id||null,quote.items[i].taxRatePercent,quote.items[i].unitPrice,quote.items[i].discountPercent,r.id));
       // 3. Mark Quote as CONVERTED
       db.prepare(`
         UPDATE quotes
@@ -367,7 +383,7 @@ export class QuotesService {
         WHERE id = ?
       `).run(subId, null, now, quoteId);
 
-      db.exec('COMMIT;');
+      db.exec('RELEASE quote_write;');
 
       return {
         success: true,
@@ -377,7 +393,7 @@ export class QuotesService {
 
       };
     } catch (err) {
-      db.exec('ROLLBACK;');
+      db.exec('ROLLBACK TO quote_write; RELEASE quote_write;');
       throw err;
     }
   }
@@ -386,6 +402,7 @@ export class QuotesService {
     return {
       ...({customerName:row.company_name || [row.first_name,row.last_name].filter(Boolean).join(' '),customerEmail:row.customer_email,planName:row.plan_name,billingFrequency:row.billing_frequency,invoiceNumber:row.invoice_number} as any),
       id: row.id,
+      ...({gst:row.gst_snapshot?JSON.parse(row.gst_snapshot):null} as any),
       quoteNumber: row.quote_number,
       customerId: row.customer_id,
       planId: row.plan_id,

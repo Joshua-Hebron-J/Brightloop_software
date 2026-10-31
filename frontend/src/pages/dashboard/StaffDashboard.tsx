@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import React, { useEffect, useState } from 'react';
 import {
   Users,
@@ -113,7 +114,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ onNavigate }) =>
         <MetricCard
           title="Quotes In Pipeline"
           value={pendingQuotes.length}
-          subtitle={`$${pendingQuotes.reduce((sum, q) => sum + q.total, 0).toFixed(2)} value`}
+          subtitle={`${formatMoney(pendingQuotes.filter(q=>q.currency==='INR').reduce((sum,q)=>sum+q.total,0))} INR value`}
           icon={FileText}
           accentColor="indigo"
         />
@@ -127,7 +128,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ onNavigate }) =>
         <MetricCard
           title="Unpaid Invoices"
           value={unpaidInvoices.length}
-          subtitle={`$${unpaidInvoices.reduce((sum, i) => sum + (i.totalAmount - i.paidAmount), 0).toFixed(2)} balance`}
+          subtitle={`${formatMoney(unpaidInvoices.filter(i=>i.currency==='INR').reduce((sum,i)=>sum+i.totalAmount-i.paidAmount,0))} INR balance`}
           icon={Receipt}
           accentColor="amber"
         />
@@ -224,10 +225,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ onNavigate }) =>
                     <StatusBadge status={q.status} size="sm" />
                   </div>
                   <p className="text-xs font-medium text-slate-700 mt-0.5">{q.customerName}</p>
-                  <p className="text-[11px] text-slate-400">Valid until {q.validityDate}</p>
+                  <p className="text-[11px] text-slate-400">Valid until {formatDate(q.validityDate)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-bold text-slate-900">${q.total.toFixed(2)}</p>
+                  <p className="text-xs font-bold text-slate-900">{formatMoney(q.total,q.currency)}</p>
                   {q.status === 'Accepted' && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-600 font-bold">
                       <CheckCircle2 className="w-3 h-3" />
@@ -277,10 +278,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ onNavigate }) =>
                       <StatusBadge status={inv.status} size="sm" />
                     </div>
                     <p className="text-xs font-medium text-slate-700 mt-0.5">{inv.customerName}</p>
-                    <p className="text-[11px] text-slate-400">Due: {inv.dueDate}</p>
+                    <p className="text-[11px] text-slate-400">Due: {formatDate(inv.dueDate)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-bold text-rose-600">${inv.totalAmount.toFixed(2)}</p>
+                    <p className="text-xs font-bold text-rose-600">{formatMoney(inv.totalAmount,inv.currency)}</p>
                     <button
                       onClick={() => onNavigate('payments')}
                       className="mt-1 text-[11px] font-semibold text-blue-600 hover:underline inline-flex items-center gap-1"

@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import {ListPager} from '../../components/common/ListPager';
 import React, { useEffect, useState } from 'react';
 import {
@@ -176,7 +177,7 @@ export const ProductListPage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4 text-slate-600">{prod.category || 'Platform'}</td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
-                      ${prod.price.toFixed(2)}
+                      {formatMoney(prod.price,prod.currency)}
                     </td>
                     <td className="py-3.5 px-4">
                       {prod.variants && prod.variants.length > 0 ? (

@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import React, { useEffect, useState } from 'react';
 import {
   DollarSign,
@@ -71,13 +72,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   return (
     <div className="space-y-6">
       {/* Top Banner / Executive Summary */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-blue-950 rounded-2xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-slate-900 rounded-2xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold uppercase tracking-wider border border-blue-500/30">
               Executive View
             </span>
-            <span className="text-xs text-slate-400">Brightloop Software HQ</span>
+            <span className="text-xs text-slate-400">BillSync Software HQ</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight mt-1.5">
             Platform Revenue & Subscription Overview
@@ -101,19 +102,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Total Revenue"
-          value={`$${metrics.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          value={formatMoney(metrics.totalRevenue)}
           icon={DollarSign}
           accentColor="emerald"
         />
         <MetricCard
           title="Monthly Recurring (MRR)"
-          value={`$${metrics.mrr.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          value={formatMoney(metrics.mrr)}
           icon={TrendingUp}
           accentColor="blue"
         />
         <MetricCard
           title="Annual Run Rate (ARR)"
-          value={`$${metrics.arr.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          value={formatMoney(metrics.arr)}
           subtitle="Forecasted annualized recurring"
           icon={ShieldCheck}
           accentColor="indigo"
@@ -134,7 +135,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         />
         <MetricCard
           title="Outstanding Payments"
-          value={`$${metrics.outstandingPayments.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          value={formatMoney(metrics.outstandingPayments)}
           icon={Clock}
           accentColor="amber"
         />
@@ -142,7 +143,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           title="Overdue Invoices"
           value={metrics.overdueInvoices}
           icon={AlertCircle}
-          badgeText="Requires Dunning"
+          badgeText="Overdue"
           accentColor="rose"
         />
       </div>
@@ -157,7 +158,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               <p className="text-xs text-slate-500">Recorded payments by month</p>
             </div>
             <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md">
-              USD ($)
+              INR
             </span>
           </div>
           <div className="h-64">
@@ -175,9 +176,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(val) => `$${val}`} />
+                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(val) => formatMoney(Number(val))} />
                 <Tooltip
-                  formatter={(val: number) => [`$${val.toLocaleString()}`, '']}
+                  formatter={(val: number) => [formatMoney(val), '']}
                   contentStyle={{ backgroundColor: '#0f172a', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
@@ -215,7 +216,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(val: number) => [`$${val.toLocaleString()}`, 'Amount']}
+                  formatter={(val: number) => [formatMoney(val), 'Amount']}
                   contentStyle={{ backgroundColor: '#0f172a', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
                 />
               </PieChart>
@@ -226,7 +227,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               <div key={item.method} className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
                 <span className="text-slate-600 truncate">{item.method}:</span>
-                <span className="font-semibold text-slate-900 ml-auto">${item.amount}</span>
+                <span className="font-semibold text-slate-900 ml-auto">{formatMoney(item.amount)}</span>
               </div>
             ))}
           </div>
@@ -283,11 +284,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 <div>
                   <p className="font-semibold text-slate-900">{tx.customerName}</p>
                   <p className="text-[11px] text-slate-500">
-                    {tx.invoiceNumber} • {tx.paymentMethod} • {tx.paymentDate}
+                    {tx.invoiceNumber} • {tx.paymentMethod} • {formatDate(tx.paymentDate)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-emerald-600">+${tx.amount.toFixed(2)}</p>
+                  <p className="font-bold text-emerald-600">+{formatMoney(tx.amount,'INR')}</p>
                   <span className="text-[10px] text-slate-400 font-mono">{tx.referenceNumber}</span>
                 </div>
               </div>
@@ -323,11 +324,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                       <StatusBadge status={inv.status} size="sm" />
                     </div>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      {inv.customerName} • Due: {inv.dueDate}
+                      {inv.customerName} • Due: {formatDate(inv.dueDate)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-rose-600">${inv.totalAmount.toFixed(2)}</p>
+                    <p className="font-bold text-rose-600">{formatMoney(inv.totalAmount,inv.currency)}</p>
                     <span className="text-[10px] text-slate-400">Unsettled</span>
                   </div>
                 </div>
@@ -360,8 +361,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-slate-900">${sub.amount.toFixed(2)}</p>
-                  <p className="text-[10px] text-slate-400">Next: {sub.nextBillingDate}</p>
+                  <p className="font-semibold text-slate-900">{formatMoney(sub.amount,sub.currency)}</p>
+                  <p className="text-[10px] text-slate-400">Next: {formatDate(sub.nextBillingDate)}</p>
                 </div>
               </div>
             ))}
@@ -395,10 +396,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 </div>
                 <div className="text-right">
                   <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                    Due {ren.nextBillingDate}
+                    Due {formatDate(ren.nextBillingDate)}
                   </span>
                   <p className="text-[11px] font-bold text-slate-800 mt-0.5">
-                    ${ren.amount.toFixed(2)}
+                    {formatMoney(ren.amount,'INR')}
                   </p>
                 </div>
               </div>

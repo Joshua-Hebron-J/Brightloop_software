@@ -86,7 +86,7 @@ export class PaymentsService {
     notes?: string | null;
   }) {
     const db = getDb();
-    const customer = db.prepare('SELECT id, credit_balance FROM customers WHERE id = ?').get(data.customerId) as any;
+    const customer = db.prepare('SELECT id, credit_balance, currency FROM customers WHERE id = ?').get(data.customerId) as any;
     if (!customer) {
       throw new HttpError(404, 'Customer not found', 'CUSTOMER_NOT_FOUND');
     }
@@ -96,7 +96,8 @@ export class PaymentsService {
     const paymentNumber = generateFormattedNumber('PAY');
     const now = new Date().toISOString();
     const paymentDate = data.paymentDate || now;
-    const currency = data.currency || 'USD';
+    const invoiceCurrency=data.invoiceId?(db.prepare('SELECT currency FROM invoices WHERE id=?').get(data.invoiceId) as any)?.currency:null;
+    const currency = data.currency || invoiceCurrency || customer.currency;
     const amount = Number(data.amount.toFixed(2));
 
     let creditedToBalance = 0;
@@ -208,7 +209,7 @@ export class PaymentsService {
       throw new HttpError(400, 'Invoice is already fully paid', 'INVOICE_ALREADY_PAID');
     }
 
-    const customer = db.prepare('SELECT id, credit_balance FROM customers WHERE id = ?').get(invoice.customer_id) as any;
+    const customer = db.prepare('SELECT id, credit_balance, currency FROM customers WHERE id = ?').get(invoice.customer_id) as any;
     if (!customer || customer.credit_balance < creditAmountToApply) {
       throw new HttpError(
         400,
@@ -260,7 +261,7 @@ export class PaymentsService {
         toApply,
         invoice.currency,
         now,
-        `credit_deduction_${customer.id}`,
+        `credit_deduction_${customer.id}_${paymentId}`,
         recordedById,
         now,
         now
@@ -302,6 +303,7 @@ export class PaymentsService {
       const credit=allocation?.credit_amount||0;const applied=allocation?.invoice_amount??Math.min(payment.amount,Number((db.prepare('SELECT amount_paid FROM invoices WHERE id=?').get(payment.invoice_id||'') as any)?.amount_paid||0));
       const customer:any=db.prepare('SELECT credit_balance FROM customers WHERE id=?').get(payment.customer_id);
       if(credit>customer.credit_balance)throw new HttpError(400,'Overpayment credit has been spent; reconcile credit before refund','CREDIT_ALREADY_SPENT');
+      if(payment.transaction_reference?.startsWith('credit_deduction_'))db.prepare('UPDATE customers SET credit_balance=round(credit_balance+?,2) WHERE id=?').run(applied,payment.customer_id);
       if(credit)db.prepare('UPDATE customers SET credit_balance=round(credit_balance-?,2) WHERE id=?').run(credit,payment.customer_id);
       if (payment.invoice_id) {
         const invoice = db.prepare('SELECT * FROM invoices WHERE id = ?').get(payment.invoice_id) as any;

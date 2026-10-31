@@ -94,7 +94,7 @@ export class CustomersService {
     const customerNumber = generateFormattedNumber('CUST');
     const now = new Date().toISOString();
     const status = data.status || 'ACTIVE';
-    const currency = data.currency || 'USD';
+    const currency = data.currency || 'INR';
     const terms = data.paymentTermsDays ?? 30;
 
     db.prepare(`
@@ -165,6 +165,10 @@ export class CustomersService {
     }
 
     const now = new Date().toISOString();
+    if(data.currency && data.currency!==existing.currency){
+      const linked:any=db.prepare('SELECT (SELECT count(*) FROM invoices WHERE customer_id=?)+(SELECT count(*) FROM subscriptions WHERE customer_id=?)+(SELECT count(*) FROM payments WHERE customer_id=?) n').get(id,id,id);
+      if(linked.n||existing.creditBalance)throw new HttpError(400,'Currency cannot change after financial records exist','CURRENCY_LOCKED');
+    }
     const updated = {
       type: data.type ?? existing.type,
       companyName: data.companyName !== undefined ? data.companyName : existing.company_name,

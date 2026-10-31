@@ -78,7 +78,7 @@ export class PlansService {
     const id = generateId('plan');
     const now = new Date().toISOString();
     const status = data.status || 'ACTIVE';
-    const currency = data.currency || 'USD';
+    const currency = data.currency || 'INR';
     const trialDays = data.trialPeriodDays ?? 0;
     const setupFee = data.setupFee ?? 0.0;
     const featuresJson = data.features ? JSON.stringify(data.features) : null;

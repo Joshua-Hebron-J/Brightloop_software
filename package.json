@@ -1,5 +1,5 @@
 {
-  "name": "brightloop",
+  "name": "billsync",
   "private": true,
   "scripts": {
     "dev": "node scripts/dev.mjs",

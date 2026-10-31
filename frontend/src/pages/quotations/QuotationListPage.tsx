@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import {ListPager} from '../../components/common/ListPager';
 import {TemplateTools} from '../../components/common/Operations';
 import React, { useEffect, useState } from 'react';
@@ -28,6 +29,7 @@ export const QuotationListPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [editing,setEditing]=useState<Quotation|null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
 
@@ -180,8 +182,8 @@ export const QuotationListPage: React.FC = () => {
                         {q.items.map((it) => `${it.productName} (${it.quantity})`).join(', ')}
                       </p>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600">{q.validityDate}</td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">${q.total.toFixed(2)}</td>
+                    <td className="py-3.5 px-4 text-slate-600">{formatDate(q.validityDate)}</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">{formatMoney(q.total,q.currency)}</td>
                     <td className="py-3.5 px-4">
                       <StatusBadge status={q.status} size="sm" />
                     </td>
@@ -195,6 +197,7 @@ export const QuotationListPage: React.FC = () => {
                           <span>View</span>
                         </button>
 
+                        {role!=='customer'&&q.status==='Draft'&&<button className="text-purple-700" onClick={()=>{setEditing(q);setIsFormOpen(true)}}>Edit</button>}
                         {role !== 'customer' && q.status === 'Accepted' && (
                           <button
                             onClick={() => handleQuickConvert(q)}
@@ -217,8 +220,9 @@ export const QuotationListPage: React.FC = () => {
 
       {/* Quotation Form Modal */}
       <QuotationFormModal
+        quotation={editing}
         isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
+        onClose={() => {setIsFormOpen(false);setEditing(null)}}
         onSuccess={loadQuotations}
       />
     </div>

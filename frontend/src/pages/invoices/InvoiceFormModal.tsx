@@ -1,7 +1,9 @@
+import {priceLines} from '../../utils/format';
+import {formatMoney,formatDate} from '../../utils/format';
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../../components/common/Modal';
 import { Invoice, InvoiceLineItem, Customer } from '../../types';
-import { invoicesApi, customersApi } from '../../services/api';
+import { invoicesApi, customersApi, request } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { Plus, Trash2 } from 'lucide-react';
 
@@ -28,10 +30,10 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
   const [items, setItems] = useState<InvoiceLineItem[]>([
     {
       id: `li-${Date.now()}`,
-      description: 'BrightFlow Cloud Platform — Monthly Enterprise Subscription',
+      description: 'BillSync Cloud Platform — Monthly Enterprise Subscription',
       quantity: 1,
       unitPrice: 99.00,
-      taxRate: 18,
+      taxRate: 0,
       discount: 0,
       amount: 99.00,
     },
@@ -59,7 +61,7 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
       description: 'Add-on License / Support Service',
       quantity: 1,
       unitPrice: 49.00,
-      taxRate: 18,
+      taxRate: 0,
       discount: 0,
       amount: 49.00,
     };
@@ -94,15 +96,12 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
     );
   };
 
-  const subtotal = items.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
-  const discountTotal = items.reduce((sum, it) => sum + (it.discount || 0), 0);
-  const taxableBase = Math.max(0, subtotal - discountTotal);
-  const taxTotal = items.reduce((sum, it) => {
-    const net = Math.max(0, it.unitPrice * it.quantity - it.discount);
-    return sum + (net * it.taxRate) / 100;
-  }, 0);
-  const totalAmount = taxableBase + taxTotal;
-
+  const discountTotal=items.reduce((n,i)=>n+(i.discount||0),0);
+  const preview=priceLines(items.map(i=>({quantity:i.quantity,unitPrice:i.unitPrice,taxRatePercent:i.taxRate})),'FIXED',discountTotal);
+  const [serverPreview,setServerPreview]=useState<any>(null),[previewError,setPreviewError]=useState(''),[previewBusy,setPreviewBusy]=useState(false);
+  useEffect(()=>{if(!isOpen||!customerId)return;let current=true;setPreviewBusy(true);setPreviewError('');request('/official/quote-preview','POST',{customerId,validUntil:dueDate,discountType:'FIXED',discountValue:discountTotal,items:items.map(i=>({description:i.description,quantity:i.quantity,unitPrice:i.unitPrice,taxRatePercent:i.taxRate}))}).then(p=>{if(current)setServerPreview(p)}).catch(e=>{if(current)setPreviewError(e.message)}).finally(()=>{if(current)setPreviewBusy(false)});return()=>{current=false}},[isOpen,customerId,items,dueDate,discountTotal]);
+  const calculated=serverPreview||preview;
+  const subtotal=calculated.subtotal,taxTotal=calculated.tax,totalAmount=calculated.total;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerId) {
@@ -124,7 +123,7 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
         dueDate,
         items,
         subtotal: Math.round(subtotal * 100) / 100,
-        taxBreakdown: [{ name: 'Standard GST/VAT', rate: 18, amount: Math.round(taxTotal * 100) / 100 }],
+        taxBreakdown: [],
         taxTotal: Math.round(taxTotal * 100) / 100,
         discountTotal: Math.round(discountTotal * 100) / 100,
         totalAmount: Math.round(totalAmount * 100) / 100,
@@ -158,7 +157,7 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
             <label className="block text-slate-700 font-semibold mb-1">
               Customer Account <span className="text-rose-500">*</span>
             </label>
-            <select
+            <select aria-label="Customer Account"
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
               className="w-full px-2.5 py-1.5 border border-slate-300 rounded-md bg-white outline-none"
@@ -173,7 +172,7 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Invoice Date</label>
-            <input
+            <input aria-label="Invoice Date"
               type="date"
               value={invoiceDate}
               onChange={(e) => setInvoiceDate(e.target.value)}
@@ -183,7 +182,7 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Due Date</label>
-            <input
+            <input aria-label="Due Date"
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
@@ -196,20 +195,20 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Initial Status</label>
-            <select
+            <select aria-label="Initial Status"
               value={status}
               onChange={(e) => setStatus(e.target.value as Invoice['status'])}
               className="w-full px-2.5 py-1.5 border border-slate-300 rounded-md bg-white outline-none"
             >
 
               <option value="Draft">Draft</option>
-              <option value="Paid">Paid (Pre-settled)</option>
+              
             </select>
           </div>
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Payment Terms</label>
-            <input
+            <input aria-label="Payment Terms"
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -218,6 +217,8 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
           </div>
         </div>
 
+        {previewError&&<p role="alert" className="text-red-600">{previewError}</p>}
+        <p className="text-xs text-slate-500">Configured tax rules override manual fallback rates. The server calculates the final total. Invoices start as drafts; confirm before recording settlement.</p>
         {/* Line Items */}
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -240,7 +241,7 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
               >
                 <div className="col-span-5">
                   <label className="text-[10px] text-slate-400 block">Description</label>
-                  <input
+                  <input aria-label="Description"
                     type="text"
                     value={item.description}
                     onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
@@ -250,7 +251,7 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
 
                 <div className="col-span-2">
                   <label className="text-[10px] text-slate-400 block">Qty</label>
-                  <input
+                  <input aria-label="Qty"
                     type="number"
                     min="1"
                     value={item.quantity}
@@ -262,8 +263,8 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
                 </div>
 
                 <div className="col-span-2">
-                  <label className="text-[10px] text-slate-400 block">Price ($)</label>
-                  <input
+                  <label className="text-[10px] text-slate-400 block">Price (currency)</label>
+                  <input aria-label="Price (currency)"
                     type="number"
                     step="0.01"
                     value={item.unitPrice}
@@ -274,9 +275,10 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
                   />
                 </div>
 
+                <div className="col-span-2"><label className="text-[10px] text-slate-400 block">GST rate (%)<input aria-label="GST rate (%)" className="w-full border rounded p-1" type="number" min="0" max="100" step="0.01" value={item.taxRate} onChange={e=>handleItemChange(item.id,'taxRate',Number(e.target.value))}/></label></div>
                 <div className="col-span-2 text-right">
                   <span className="text-[10px] text-slate-400 block">Line Amount</span>
-                  <span className="font-bold text-slate-900">${item.amount.toFixed(2)}</span>
+                  <span className="font-bold text-slate-900">{formatMoney(item.amount,customers.find(c=>c.id===customerId)?.currency)}</span>
                 </div>
 
                 <div className="col-span-1 text-right">
@@ -298,15 +300,15 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
           <div className="w-full sm:w-60 space-y-1 text-xs">
             <div className="flex justify-between text-slate-600">
               <span>Subtotal:</span>
-              <span className="font-medium">${subtotal.toFixed(2)}</span>
+              <span className="font-medium">{formatMoney(subtotal,customers.find(c=>c.id===customerId)?.currency)}</span>
             </div>
             <div className="flex justify-between text-slate-600">
-              <span>Tax (GST 18%):</span>
-              <span className="font-medium">${taxTotal.toFixed(2)}</span>
+              <span>Configured tax:</span>
+              <span className="font-medium">{formatMoney(taxTotal,customers.find(c=>c.id===customerId)?.currency)}</span>
             </div>
             <div className="flex justify-between pt-1.5 border-t border-slate-200 text-sm font-bold text-slate-900">
               <span>Total Amount:</span>
-              <span className="text-blue-600">${totalAmount.toFixed(2)}</span>
+              <span className="text-blue-600">{formatMoney(totalAmount,customers.find(c=>c.id===customerId)?.currency)}</span>
             </div>
           </div>
         </div>
@@ -316,14 +318,14 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            disabled={isLoading}
+            disabled={isLoading || previewBusy || !!previewError}
             className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-semibold"
           >
             Cancel
           </button>
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || previewBusy || !!previewError}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-sm transition-colors"
           >
             {isLoading ? 'Issuing...' : 'Generate Invoice'}

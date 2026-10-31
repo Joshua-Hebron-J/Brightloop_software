@@ -20,6 +20,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
 }) => {
   const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
+  const[currency,setCurrency]=useState('INR'),[trial,setTrial]=useState('0'),[setup,setSetup]=useState('0');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [productId, setProductId] = useState('');
@@ -58,6 +59,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
   useEffect(() => {
     if (plan) {
       setAllowClose((plan as any).allowClose??true);setAutoClose((plan as any).autoClose??false);
+      setCurrency(plan.currency||'USD');setTrial(String((plan as any).trialPeriodDays||0));setSetup(String((plan as any).setupFee||0));
       setName(plan.name);
       setDescription(plan.description);
       setProductId(plan.productId);
@@ -117,10 +119,10 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
     try {
       const planPayload = {
         name,
-        allowClose,autoClose,
+        allowClose,autoClose,currency,trialPeriodDays:Number(trial),setupFee:Number(setup),
         description,
         productId,
-        productName: selectedProduct?.name || 'BrightFlow Cloud Engine',
+        productName: selectedProduct?.name || 'BillSync Cloud Engine',
         billingFrequency,
         price: numPrice,
         minimumQuantity: parseInt(minimumQuantity, 10) || 1,
@@ -159,18 +161,19 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={plan ? 'Edit Subscription Plan' : 'Create Subscription Plan'}
-      description="Configure billing cadences (Daily/Weekly/Monthly/Yearly), pricing, pause rules and grace periods"
+      description="Configure billing cadences (Daily/Weekly/Monthly/Yearly), pricing and lifecycle policies"
       maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
         <div className="flex gap-6"><label><input type="checkbox" checked={allowClose} onChange={e=>setAllowClose(e.target.checked)}/> Allow early closure</label><label><input type="checkbox" checked={autoClose} onChange={e=>setAutoClose(e.target.checked)}/> Close automatically at expiry</label></div>
+        <div className="grid sm:grid-cols-3 gap-3"><label>Plan currency<select aria-label="Plan currency" className="block border rounded-lg p-2" value={currency} onChange={e=>setCurrency(e.target.value)}><option>INR</option><option>USD</option></select></label><label>Trial days<input aria-label="Trial days" className="block border rounded-lg p-2" type="number" min="0" value={trial} onChange={e=>setTrial(e.target.value)}/></label><label>Setup fee<input aria-label="Setup fee" className="block border rounded-lg p-2" type="number" min="0" step="0.01" value={setup} onChange={e=>setSetup(e.target.value)}/></label></div>
         {/* Basic Info */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-slate-700 font-semibold mb-1">
               Plan Name <span className="text-rose-500">*</span>
             </label>
-            <input
+            <input aria-label="Plan name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -184,7 +187,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
             <label className="block text-slate-700 font-semibold mb-1">
               Target Product <span className="text-rose-500">*</span>
             </label>
-            <select
+            <select aria-label="Target Product"
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-xs bg-white"
@@ -200,7 +203,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
 
         <div>
           <label className="block text-slate-700 font-semibold mb-1">Plan Description</label>
-          <textarea
+          <textarea aria-label="Plan Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
@@ -213,7 +216,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Billing Frequency</label>
-            <select
+            <select aria-label="Billing Frequency"
               value={billingFrequency}
               onChange={(e) => setBillingFrequency(e.target.value as BillingFrequency)}
               className="w-full px-2.5 py-1.5 border border-slate-300 rounded-md bg-white capitalize"
@@ -226,8 +229,8 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-slate-700 font-semibold mb-1">Price per Interval ($)</label>
-            <input
+            <label className="block text-slate-700 font-semibold mb-1">Price per Interval (currency)</label>
+            <input aria-label="Price per Interval (currency)"
               type="number"
               step="0.01"
               value={price}
@@ -239,7 +242,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Minimum Quantity</label>
-            <input
+            <input aria-label="Minimum Quantity"
               type="number"
               min="1"
               value={minimumQuantity}
@@ -253,7 +256,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Availability Start Date</label>
-            <input
+            <input aria-label="Availability Start Date"
               type="date"
               value={availabilityStartDate}
               onChange={(e) => setAvailabilityStartDate(e.target.value)}
@@ -263,7 +266,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Availability End Date (Optional)</label>
-            <input
+            <input aria-label="Availability End Date (Optional)"
               type="date"
               value={availabilityEndDate}
               onChange={(e) => setAvailabilityEndDate(e.target.value)}
@@ -286,17 +289,6 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
               />
               <span className="text-slate-700 font-medium">Allow Customer Pause</span>
             </label>
-            {allowPause && (
-              <div>
-                <label className="text-slate-500 block mb-1">Max Pause Allowance (Days)</label>
-                <input
-                  type="number"
-                  value={maxPauseDays}
-                  onChange={(e) => setMaxPauseDays(e.target.value)}
-                  className="w-full px-2 py-1 border border-slate-300 rounded bg-white"
-                />
-              </div>
-            )}
           </div>
 
           {/* Renewal Settings */}
@@ -311,15 +303,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
               />
               <span className="text-slate-700 font-medium">Auto-Renew Default</span>
             </label>
-            <div>
-              <label className="text-slate-500 block mb-1">Grace Period (Days)</label>
-              <input
-                type="number"
-                value={gracePeriodDays}
-                onChange={(e) => setGracePeriodDays(e.target.value)}
-                className="w-full px-2 py-1 border border-slate-300 rounded bg-white"
-              />
-            </div>
+            
           </div>
         </div>
 

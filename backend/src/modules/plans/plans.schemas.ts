@@ -23,7 +23,7 @@ export const createPlanSchema = z.object({
   description: z.string().optional(),
   billingFrequency: billingFrequencyEnum,
   price: z.number().nonnegative('Price must be greater than or equal to 0'),
-  currency: z.string().default('USD'),
+  currency: z.enum(['INR','USD','EUR','GBP']).optional(),
   trialPeriodDays: z.number().int().nonnegative().default(0),
   setupFee: z.number().nonnegative().default(0),
   features: z.array(z.string()).optional(),

@@ -1,7 +1,7 @@
 {
-  "name": "brightloop-backend",
+  "name": "billsync-backend",
   "version": "1.0.0",
-  "description": "Brightloop B2B Subscription and Recurring Billing Management Platform Backend",
+  "description": "BillSync B2B Subscription and Recurring Billing Management Platform Backend",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc && node -e \"const fs = require('fs'); fs.cpSync('src/database/migrations', 'dist/src/database/migrations', { recursive: true, errorOnExist: false });\"",

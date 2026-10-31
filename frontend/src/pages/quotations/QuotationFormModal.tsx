@@ -1,7 +1,9 @@
+import {priceLines} from '../../utils/format';
+import {formatMoney,formatDate} from '../../utils/format';
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../../components/common/Modal';
 import { Quotation, QuotationItem, Customer, Product, Plan } from '../../types';
-import { quotationsApi, customersApi, productsApi, plansApi } from '../../services/api';
+import { request, quotationsApi, customersApi, productsApi, plansApi } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { Plus, Trash2, Calculator } from 'lucide-react';
 
@@ -77,7 +79,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
             quantity: 1,
             unitPrice: defaultPlan.price,
             discount: 0,
-            taxRate: 18,
+            taxRate: 0,
             subtotal: defaultPlan.price,
           },
         ]);
@@ -98,7 +100,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
       quantity: 1,
       unitPrice: defaultPlan.price,
       discount: 0,
-      taxRate: 18,
+      taxRate: 0,
       subtotal: defaultPlan.price,
     };
     setItems([...items, newItem]);
@@ -177,16 +179,11 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
     );
   };
 
-  // Totals Calculation
-  const subtotal = items.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
-  const discountTotal = items.reduce((sum, it) => sum + (it.discount || 0), 0);
-  const taxableBase = Math.max(0, subtotal - discountTotal);
-  const taxTotal = items.reduce((sum, it) => {
-    const itemNet = Math.max(0, it.unitPrice * it.quantity - it.discount);
-    return sum + (itemNet * it.taxRate) / 100;
-  }, 0);
-  const total = taxableBase + taxTotal;
-
+  const localPreview=priceLines(items.map(i=>({quantity:i.quantity,unitPrice:i.unitPrice,discountPercent:i.discount,taxRatePercent:i.taxRate})));
+  const[serverPreview,setServerPreview]=useState<any>(null),[previewError,setPreviewError]=useState(''),[previewBusy,setPreviewBusy]=useState(false);
+  useEffect(()=>{let current=true;if(!customerId||!items.length)return;setPreviewBusy(true);setPreviewError('');request('/official/quote-preview','POST',{customerId,planId:items[0]?.planId,validUntil:new Date(validityDate).toISOString(),items:items.map(i=>({productId:i.productId||null,description:i.productName,quantity:i.quantity,unitPrice:i.unitPrice,discountPercent:i.discount,taxRatePercent:i.taxRate}))}).then(p=>{if(current)setServerPreview(p)}).catch(e=>{if(current){setServerPreview(null);setPreviewError(e.message)}}).finally(()=>{if(current)setPreviewBusy(false)});return()=>{current=false}},[customerId,items,validityDate]);
+  const preview=serverPreview||localPreview;
+  const subtotal=preview.subtotal,discountTotal=preview.discount,taxTotal=preview.tax,total=preview.total;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerId) {
@@ -198,7 +195,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
 
     setIsLoading(true);
     try {
-      await quotationsApi.create({
+      await (quotation?quotationsApi.update.bind(null,quotation.id):quotationsApi.create)({
         customerId,
         customerName: customer.company,
         customerEmail: customer.email,
@@ -211,7 +208,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
         status,
         notes,
       });
-      showToast('success', 'Quotation Dispatched', `Quote for ${customer.company} created.`);
+      showToast('success', 'Quotation saved', `Quote for ${customer.company} created.`);
       onSuccess();
       onClose();
     } catch {
@@ -230,13 +227,14 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
       maxWidth="3xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        {previewError&&<p role="alert" className="text-red-600">{previewError}</p>}
         {/* Customer & Expiration */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
           <div>
             <label className="block text-slate-700 font-semibold mb-1">
               Recipient Customer <span className="text-rose-500">*</span>
             </label>
-            <select
+            <select aria-label="Recipient Customer"
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
               className="w-full px-2.5 py-1.5 border border-slate-300 rounded-md bg-white outline-none"
@@ -251,7 +249,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Validity Expiration Date</label>
-            <input
+            <input aria-label="Validity Expiration Date"
               type="date"
               value={validityDate}
               onChange={(e) => setValidityDate(e.target.value)}
@@ -261,7 +259,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Initial Status</label>
-            <select
+            <select aria-label="Initial Status"
               value={status}
               onChange={(e) => setStatus(e.target.value as Quotation['status'])}
               className="w-full px-2.5 py-1.5 border border-slate-300 rounded-md bg-white outline-none"
@@ -288,7 +286,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
           </div>
 
           <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-            {items.map((item) => (
+            {items.map((item,index) => (
               <div
                 key={item.id}
                 className="p-3 bg-white border border-slate-200 rounded-lg grid grid-cols-12 gap-2 items-center"
@@ -296,7 +294,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
                 {/* Product Select */}
                 <div className="col-span-3">
                   <label className="text-[10px] text-slate-400 block">Product</label>
-                  <select
+                  <select aria-label="Product"
                     value={item.productId}
                     onChange={(e) => handleProductChange(item.id, e.target.value)}
                     className="w-full px-2 py-1 border border-slate-300 rounded bg-white text-xs truncate"
@@ -312,7 +310,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
                 {/* Plan Select */}
                 <div className="col-span-3">
                   <label className="text-[10px] text-slate-400 block">Plan</label>
-                  <select
+                  <select aria-label="Plan"
                     value={item.planId}
                     onChange={(e) => handlePlanChange(item.id, e.target.value)}
                     className="w-full px-2 py-1 border border-slate-300 rounded bg-white text-xs truncate"
@@ -321,7 +319,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
                       .filter((pl) => pl.productId === item.productId)
                       .map((pl) => (
                         <option key={pl.id} value={pl.id}>
-                          {pl.name} (${pl.price})
+                          {pl.name} ({formatMoney(pl.price,pl.currency)})
                         </option>
                       ))}
                   </select>
@@ -330,7 +328,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
                 {/* Quantity */}
                 <div className="col-span-2">
                   <label className="text-[10px] text-slate-400 block">Quantity</label>
-                  <input
+                  <input aria-label="Quantity"
                     type="number"
                     min="1"
                     value={item.quantity}
@@ -343,8 +341,8 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
 
                 {/* Discount */}
                 <div className="col-span-2">
-                  <label className="text-[10px] text-slate-400 block">Discount ($)</label>
-                  <input
+                  <label className="text-[10px] text-slate-400 block">Discount (%)</label>
+                  <input aria-label="Discount (%)"
                     type="number"
                     min="0"
                     step="0.01"
@@ -356,11 +354,12 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
                   />
                 </div>
 
+                <label className="col-span-3 text-xs">Unit price<input aria-label="Quotation unit price" className="w-full border rounded p-2" type="number" min="0" step="0.01" value={item.unitPrice} onChange={e=>handleItemFieldChange(item.id,'unitPrice',Number(e.target.value))}/></label><label className="col-span-3 text-xs">GST rate (%)<input aria-label="GST rate (%)" className="w-full border rounded p-2" type="number" min="0" max="100" step="0.01" value={item.taxRate} onChange={e=>handleItemFieldChange(item.id,'taxRate',Number(e.target.value))}/></label>
                 {/* Subtotal & Delete */}
                 <div className="col-span-2 flex items-center justify-end gap-2">
                   <div className="text-right">
                     <span className="text-[10px] text-slate-400 block">Subtotal</span>
-                    <span className="font-bold text-slate-900">${item.subtotal.toFixed(2)}</span>
+                    <span className="font-bold text-slate-900">{formatMoney(serverPreview?.lines[index]?.lineTotal??item.subtotal,serverPreview?.currency||customers.find(c=>c.id===customerId)?.currency)}</span>
                   </div>
                   <button
                     type="button"
@@ -379,7 +378,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
         <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row justify-between gap-4">
           <div className="flex-1">
             <label className="block text-slate-700 font-semibold mb-1">Proposal Terms & Notes</label>
-            <textarea
+            <textarea aria-label="Proposal Terms & Notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
@@ -391,21 +390,22 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
           <div className="w-full sm:w-56 space-y-1 text-xs">
             <div className="flex justify-between text-slate-600">
               <span>Gross Total:</span>
-              <span className="font-medium">${subtotal.toFixed(2)}</span>
+              <span className="font-medium">{formatMoney(subtotal,'INR')}</span>
             </div>
             {discountTotal > 0 && (
               <div className="flex justify-between text-emerald-600">
                 <span>Discounts:</span>
-                <span className="font-medium">-${discountTotal.toFixed(2)}</span>
+                <span className="font-medium">-{formatMoney(discountTotal,'INR')}</span>
               </div>
             )}
             <div className="flex justify-between text-slate-600">
-              <span>Tax (GST/VAT 18%):</span>
-              <span className="font-medium">${taxTotal.toFixed(2)}</span>
+              <span>Configured GST:</span>
+              <span className="font-medium">{formatMoney(taxTotal,'INR')}</span>
             </div>
+            {serverPreview?.gst&&<p className="text-xs text-slate-500">{serverPreview.gst.mode==='IGST'?'IGST':'CGST + SGST'} ? {serverPreview.gst.placeOfSupplyName}</p>}
             <div className="flex justify-between pt-1.5 border-t border-slate-200 text-sm font-bold text-slate-900">
               <span>Proposal Total:</span>
-              <span className="text-blue-600">${total.toFixed(2)}</span>
+              <span className="text-blue-600">{formatMoney(total,'INR')}</span>
             </div>
           </div>
         </div>
@@ -422,7 +422,7 @@ export const QuotationFormModal: React.FC<QuotationFormModalProps> = ({
           </button>
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading||previewBusy||!!previewError||!serverPreview}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-sm transition-colors"
           >
             {isLoading ? 'Processing...' : 'Issue Quotation'}

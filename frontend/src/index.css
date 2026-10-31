@@ -43,3 +43,12 @@
     box-shadow: none !important;
   }
 }
+
+:root {color-scheme:light;--navy:#101A35;--purple:#6941C6;--teal:#14B8A6}
+body {background:#F8FAFC;color:#172033;font-feature-settings:"cv02","cv03","cv04","cv11"}
+button,input,select,textarea{transition:background-color .14s,border-color .14s,box-shadow .14s}
+button:focus-visible,a:focus-visible{outline:3px solid #B692F6;outline-offset:3px}
+input:focus,select:focus,textarea:focus{border-color:#875BF7;box-shadow:0 0 0 3px #F4F0FF;outline:none}
+label input,label select{max-width:100%}
+@media(prefers-reduced-motion:no-preference){main>div{animation:page-in .18s ease-out}@keyframes page-in{from{opacity:.6;transform:translateY(3px)}to{opacity:1;transform:none}}}
+@media print {body * {visibility:hidden}#printable-invoice,#printable-invoice *{visibility:visible}#printable-invoice{position:absolute;inset:0;width:100%;border:0;box-shadow:none}}

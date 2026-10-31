@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import {ListPager} from '../../components/common/ListPager';
 
 import React, { useEffect, useState } from 'react';
@@ -160,7 +161,7 @@ export const InvoiceListPage: React.FC<InvoiceListPageProps> = ({
 
           <p className="text-xs text-slate-500 mt-0.5">
 
-            Compliant tax invoice generation, automated batch schedules, and PDF print formatting
+            Configured tax invoice generation, automated batch schedules, and PDF print formatting
 
           </p>
 
@@ -204,7 +205,7 @@ export const InvoiceListPage: React.FC<InvoiceListPageProps> = ({
 
       </div>
 
-      {role!=='customer' && <div className="bg-white border rounded-xl p-4 space-y-2"><h3 className="font-semibold">Invoice actions</h3>{invoices.filter(i=>i.status!=='Paid'&&i.status!=='Cancelled').slice(0,10).map(i=><div className="flex flex-wrap items-center gap-3 text-sm" key={i.id}><span>{i.invoiceNumber} Â· {i.status}</span>{i.status==='Draft'&&<button className="text-blue-600" onClick={async()=>{try{await invoicesApi.updateStatus(i.id,'Confirmed');loadData()}catch(e){showToast('error','Confirm failed',String(e))}}}>Confirm</button>}<button className="text-blue-600" onClick={async()=>{try{const r=await invoicesApi.send(i.id);showToast('info','Invoice email',r.delivered?'Accepted by email provider':'Queued in local demo outbox')}catch(e){showToast('error','Send failed',String(e))}}}>Send</button><button className="text-rose-600" onClick={async()=>{if(!confirm('Cancel this invoice?'))return;try{await invoicesApi.updateStatus(i.id,'Cancelled');loadData()}catch(e){showToast('error','Cancel failed',String(e))}}}>Cancel</button></div>)}</div>}
+      {role!=='customer' && <div className="bg-white border rounded-xl p-4 space-y-2"><h3 className="font-semibold">Invoice actions</h3>{invoices.filter(i=>i.status!=='Paid'&&i.status!=='Cancelled').slice(0,10).map(i=><div className="flex flex-wrap items-center gap-3 text-sm" key={i.id}><span>{i.invoiceNumber} · {i.status}</span>{i.status==='Draft'&&<button className="text-blue-600" onClick={async()=>{try{await invoicesApi.updateStatus(i.id,'Confirmed');loadData()}catch(e){showToast('error','Confirm failed',String(e))}}}>Confirm</button>}<button className="text-blue-600" onClick={async()=>{try{const r=await invoicesApi.send(i.id);showToast('info','Invoice email',r.delivered?'Accepted by email provider':'Queued in local demo outbox')}catch(e){showToast('error','Send failed',String(e))}}}>Send</button><button className="text-rose-600" onClick={async()=>{if(!confirm('Cancel this invoice?'))return;try{await invoicesApi.updateStatus(i.id,'Cancelled');loadData()}catch(e){showToast('error','Cancel failed',String(e))}}}>Cancel</button></div>)}</div>}
 
       {/* Search and Filters */}
 
@@ -304,7 +305,7 @@ export const InvoiceListPage: React.FC<InvoiceListPageProps> = ({
 
                   <th className="py-3 px-4">Due Date</th>
 
-                  <th className="py-3 px-4">Tax (18%)</th>
+                  <th className="py-3 px-4">Tax</th>
 
                   <th className="py-3 px-4">Total Amount</th>
 
@@ -330,15 +331,15 @@ export const InvoiceListPage: React.FC<InvoiceListPageProps> = ({
 
                     <td className="py-3.5 px-4 font-semibold text-slate-800">{inv.customerName}</td>
 
-                    <td className="py-3.5 px-4 text-slate-600">{inv.invoiceDate}</td>
+                    <td className="py-3.5 px-4 text-slate-600">{formatDate(inv.invoiceDate)}</td>
 
-                    <td className="py-3.5 px-4 text-slate-600">{inv.dueDate}</td>
+                    <td className="py-3.5 px-4 text-slate-600">{formatDate(inv.dueDate)}</td>
 
-                    <td className="py-3.5 px-4 text-slate-600">${inv.taxTotal.toFixed(2)}</td>
+                    <td className="py-3.5 px-4 text-slate-600">{formatMoney(inv.taxTotal,inv.currency)}</td>
 
                     <td className="py-3.5 px-4 font-bold text-slate-900">
 
-                      ${inv.totalAmount.toFixed(2)}
+                      {formatMoney(inv.totalAmount,inv.currency)}
 
                     </td>
 

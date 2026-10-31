@@ -13,7 +13,7 @@ export const createInvoiceSchema = z.object({
   subscriptionId: z.string().optional().nullable(),
   issueDate: z.string().optional(),
   dueDate: z.string().optional(),
-  currency: z.string().default('USD'),
+  currency: z.enum(['INR','USD','EUR','GBP']).optional(),
   discountType: z.enum(['PERCENTAGE', 'FIXED']).default('PERCENTAGE'),
   discountValue: z.number().nonnegative().default(0),
   taxType: z.enum(['SALES_TAX', 'VAT', 'GST', 'ZERO_RATED']).default('SALES_TAX'),

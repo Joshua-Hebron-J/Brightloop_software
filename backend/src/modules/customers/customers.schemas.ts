@@ -19,7 +19,7 @@ export const createCustomerSchema = z.object({
   billingAddress: addressSchema,
   shippingAddress: addressSchema.optional().nullable(),
   taxId: z.string().optional().nullable(),
-  currency: z.string().default('USD'),
+  currency: z.enum(['INR','USD','EUR','GBP']).optional(),
   paymentTermsDays: z.number().int().nonnegative().default(30),
   status: z.enum(['ACTIVE', 'SUSPENDED', 'ARCHIVED']).default('ACTIVE'),
 });

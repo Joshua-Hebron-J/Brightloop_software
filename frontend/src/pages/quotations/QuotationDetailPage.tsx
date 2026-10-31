@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import React, { useState } from 'react';
 import { Quotation } from '../../types';
 import { quotationsApi, subscriptionsApi, invoicesApi } from '../../services/api';
@@ -76,7 +77,7 @@ export const QuotationDetailPage: React.FC<QuotationDetailPageProps> = ({
             </div>
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              Valid until <strong>{quotation.validityDate}</strong> • Created on{' '}
+              Valid until <strong>{formatDate(quotation.validityDate)}</strong> • Created on{' '}
               {quotation.createdAt.split('T')[0]}
             </p>
           </div>
@@ -161,11 +162,11 @@ export const QuotationDetailPage: React.FC<QuotationDetailPageProps> = ({
                     <td className="py-3 px-3 font-bold text-slate-900">{it.productName}</td>
                     <td className="py-3 px-3 text-blue-600 font-semibold">{it.planName}</td>
                     <td className="py-3 px-3 text-center font-bold">{it.quantity}</td>
-                    <td className="py-3 px-3 text-right">${it.unitPrice.toFixed(2)}</td>
+                    <td className="py-3 px-3 text-right">{formatMoney(it.unitPrice,'INR')}</td>
                     <td className="py-3 px-3 text-right text-emerald-600">{it.discount.toFixed(2)}%</td>
                     <td className="py-3 px-3 text-right">{it.taxRate}%</td>
                     <td className="py-3 px-3 text-right font-bold text-slate-900">
-                      ${it.subtotal.toFixed(2)}
+                      {formatMoney(it.subtotal,'INR')}
                     </td>
                   </tr>
                 ))}
@@ -179,21 +180,21 @@ export const QuotationDetailPage: React.FC<QuotationDetailPageProps> = ({
           <div className="w-full sm:w-64 space-y-1.5 text-xs">
             <div className="flex justify-between text-slate-600">
               <span>Gross Subtotal:</span>
-              <span className="font-medium">${quotation.subtotal.toFixed(2)}</span>
+              <span className="font-medium">{formatMoney(quotation.subtotal,quotation.currency)}</span>
             </div>
             {quotation.discountTotal > 0 && (
               <div className="flex justify-between text-emerald-600">
                 <span>Discounts Applied:</span>
-                <span className="font-medium">-${quotation.discountTotal.toFixed(2)}</span>
+                <span className="font-medium">-{formatMoney(quotation.discountTotal,quotation.currency)}</span>
               </div>
             )}
             <div className="flex justify-between text-slate-600">
               <span>Applicable tax:</span>
-              <span className="font-medium">${quotation.taxTotal.toFixed(2)}</span>
+              <span className="font-medium">{formatMoney(quotation.taxTotal,quotation.currency)}</span>
             </div>
             <div className="flex justify-between pt-2 border-t border-slate-200 text-base font-bold text-slate-900">
               <span>Proposal Total:</span>
-              <span className="text-blue-600">${quotation.total.toFixed(2)}</span>
+              <span className="text-blue-600">{formatMoney(quotation.total,quotation.currency)}</span>
             </div>
           </div>
         </div>

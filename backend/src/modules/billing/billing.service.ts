@@ -1,3 +1,4 @@
+import {saveInvoiceGst} from '../official/gst';
 import { priceRecurring } from '../official/policy';
 import { getDb } from '../../database/db';
 import { HttpError } from '../../middlewares/errorHandler';
@@ -307,6 +308,7 @@ export class BillingService {
         );
       }
 
+      saveInvoiceGst(invoiceId);
       // Mark cycle as GENERATED
       db.prepare("UPDATE billing_cycles SET status = 'GENERATED', updated_at = ? WHERE id = ?").run(nowIso, cycleId);
 

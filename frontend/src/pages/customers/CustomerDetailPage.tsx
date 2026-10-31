@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import React, { useEffect, useState } from 'react';
 import { Customer, Subscription, Invoice, Payment, Quotation } from '../../types';
 import { subscriptionsApi, invoicesApi, paymentsApi, quotationsApi } from '../../services/api';
@@ -56,8 +57,8 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
     loadData();
   }, [customer.id]);
 
-  const totalSpent = payments.reduce((sum, p) => sum + p.amount, 0);
-  const unpaidInvoices = invoices.filter((i) => i.status !== 'Paid');
+  const totalSpent = payments.filter(p=>p.status==='Completed'&&!p.referenceNumber.startsWith('credit_deduction_')).reduce((sum,p)=>sum+p.amount,0);
+  const unpaidInvoices = invoices.filter(i=>['Confirmed','Partial'].includes(i.status));
   const outstandingBalance = unpaidInvoices.reduce((sum, i) => sum + (i.totalAmount - i.paidAmount), 0);
 
   return (
@@ -122,7 +123,7 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
         <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
           <div>
             <span className="text-slate-400 block text-[11px]">Total Settled Revenue</span>
-            <span className="text-lg font-bold text-slate-900">${totalSpent.toFixed(2)}</span>
+            <span className="text-lg font-bold text-slate-900">{formatMoney(totalSpent,customer.currency)}</span>
           </div>
           <div>
             <span className="text-slate-400 block text-[11px]">Active Subscriptions</span>
@@ -133,7 +134,7 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
           <div>
             <span className="text-slate-400 block text-[11px]">Outstanding Due</span>
             <span className={`text-lg font-bold ${outstandingBalance > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
-              ${outstandingBalance.toFixed(2)}
+              {formatMoney(outstandingBalance,customer.currency)}
             </span>
           </div>
           <div>
@@ -223,8 +224,8 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                           {s.productName} — {s.planName}
                         </td>
                         <td className="py-2.5 px-3 capitalize">{s.billingFrequency}</td>
-                        <td className="py-2.5 px-3 font-bold">${s.amount.toFixed(2)}</td>
-                        <td className="py-2.5 px-3 text-slate-600">{s.nextBillingDate}</td>
+                        <td className="py-2.5 px-3 font-bold">{formatMoney(s.amount,s.currency)}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{formatDate(s.nextBillingDate)}</td>
                         <td className="py-2.5 px-3">
                           <StatusBadge status={s.status} size="sm" />
                         </td>
@@ -254,9 +255,9 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                     {invoices.map((inv) => (
                       <tr key={inv.id}>
                         <td className="py-2.5 px-3 font-bold text-slate-900">{inv.invoiceNumber}</td>
-                        <td className="py-2.5 px-3 text-slate-600">{inv.invoiceDate}</td>
-                        <td className="py-2.5 px-3 text-slate-600">{inv.dueDate}</td>
-                        <td className="py-2.5 px-3 font-bold">${inv.totalAmount.toFixed(2)}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{formatDate(inv.invoiceDate)}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{formatDate(inv.dueDate)}</td>
+                        <td className="py-2.5 px-3 font-bold">{formatMoney(inv.totalAmount,inv.currency)}</td>
                         <td className="py-2.5 px-3">
                           <StatusBadge status={inv.status} size="sm" />
                         </td>
@@ -295,12 +296,12 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                     {payments.map((p) => (
                       <tr key={p.id}>
                         <td className="py-2.5 px-3 font-bold text-slate-900">{p.paymentNumber}</td>
-                        <td className="py-2.5 px-3 text-slate-600">{p.paymentDate}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{formatDate(p.paymentDate)}</td>
                         <td className="py-2.5 px-3">{p.paymentMethod}</td>
                         <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500">
                           {p.referenceNumber}
                         </td>
-                        <td className="py-2.5 px-3 font-bold text-emerald-600">${p.amount.toFixed(2)}</td>
+                        <td className="py-2.5 px-3 font-bold text-emerald-600">{formatMoney(p.amount,p.currency)}</td>
                         <td className="py-2.5 px-3">
                           <StatusBadge status={p.status} size="sm" />
                         </td>
@@ -332,8 +333,8 @@ export const CustomerDetailPage: React.FC<CustomerDetailPageProps> = ({
                         <td className="py-2.5 px-3">
                           {q.items.map((it) => `${it.productName} (${it.quantity})`).join(', ')}
                         </td>
-                        <td className="py-2.5 px-3 text-slate-600">{q.validityDate}</td>
-                        <td className="py-2.5 px-3 font-bold text-slate-900">${q.total.toFixed(2)}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{formatDate(q.validityDate)}</td>
+                        <td className="py-2.5 px-3 font-bold text-slate-900">{formatMoney(q.total,q.currency)}</td>
                         <td className="py-2.5 px-3">
                           <StatusBadge status={q.status} size="sm" />
                         </td>

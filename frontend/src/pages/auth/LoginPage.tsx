@@ -1,3 +1,4 @@
+import {BillSyncLogo} from '../../components/common/BillSyncLogo';
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -40,10 +41,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setIsLoading(true);
     const demoEmail =
       role === 'admin'
-        ? 'admin@brightloop.io'
+        ? 'admin@billsync.test'
         : role === 'staff'
-        ? 'billing@brightloop.io'
-        : 'customer@brightloop.io';
+        ? 'billing@billsync.test'
+        : 'customer@billsync.test';
     try {
       await login(demoEmail, 'Password123!', role);
       showToast('success', 'Demo Login Successful', `Logged in as ${role.toUpperCase()} persona.`);
@@ -59,13 +60,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 text-center">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-500/30 mb-4">
-          <Zap className="w-8 h-8 fill-current" />
+          <BillSyncLogo/>
         </div>
         <h2 className="text-3xl font-extrabold text-white tracking-tight">
-          Brightloop Software
+          BillSync Software
         </h2>
         <p className="mt-1.5 text-sm text-slate-400">
-          Unified Platform for Subscription Plans, Billing & Revenue
+          Every bill. Every cycle. In sync.
         </p>
       </div>
 

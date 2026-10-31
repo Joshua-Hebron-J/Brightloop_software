@@ -83,7 +83,7 @@ export class ProductsService {
   }
 
   static createProduct(data: {
-    productType?:string; salesPrice?:number; costPrice?:number;
+    currency?:string; productType?:string; salesPrice?:number; costPrice?:number;
     name: string;
     code: string;
     description?: string;
@@ -109,6 +109,7 @@ export class ProductsService {
       `).run(id, data.name, data.code, data.description || null, data.category || null, status, now, now);
 
       db.prepare('UPDATE products SET product_type=?,sales_price=?,cost_price=? WHERE id=?').run(data.productType||'Software',data.salesPrice||0,data.costPrice||0,id);
+      db.prepare('UPDATE products SET currency=? WHERE id=?').run(data.currency||'INR',id);
       const createdVariants: ProductVariant[] = [];
 
       if (data.variants && data.variants.length > 0) {
@@ -157,6 +158,7 @@ export class ProductsService {
         description: data.description || null,
         category: data.category || null,
         status,
+        ...({currency:data.currency||'INR'} as any),
         variants: createdVariants,
         createdAt: now,
         updatedAt: now,
@@ -168,7 +170,7 @@ export class ProductsService {
   }
 
   static updateProduct(id: string, data: Partial<{
-    productType?:string; salesPrice?:number; costPrice?:number;
+    currency?:string; productType?:string; salesPrice?:number; costPrice?:number;
     name: string;
     code: string;
     description?: string;
@@ -342,7 +344,7 @@ export class ProductsService {
 
   private static mapProduct(row: any): Product {
     return {
-      ...({productType:row.product_type,salesPrice:row.sales_price,costPrice:row.cost_price,} as any),
+      ...({currency:row.currency,productType:row.product_type,salesPrice:row.sales_price,costPrice:row.cost_price,} as any),
       id: row.id,
       name: row.name,
       code: row.code,

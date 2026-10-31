@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../../components/common/Modal';
 import { Customer, Invoice, PaymentMethod } from '../../types';
@@ -127,7 +128,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       await paymentsApi.create({
         customerId: customer.id,
         customerName: customer.company,
-        invoiceId: invoice?.id || `inv-adhoc-${Date.now()}`,
+        invoiceId: invoice?.id || '',
         invoiceNumber: invoice?.invoiceNumber || 'INV-DIRECT',
         amount: numAmount,
         paymentDate,
@@ -140,7 +141,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       showToast(
         'success',
         'Payment Recorded Successfully',
-        `$${numAmount.toFixed(2)} recorded via ${paymentMethod}.`
+        `${formatMoney(numAmount,invoice?.currency||customer.currency)} recorded via ${paymentMethod}.`
       );
       onSuccess();
       onClose();
@@ -159,7 +160,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       description="Record incoming cash, credit card, bank wire, or UPI settlement against outstanding invoices"
       maxWidth="lg"
     >
-      <p className="text-sm text-slate-500 mb-3">This records a payment received outside Brightloop. No card is charged and no funds are transferred.</p>
+      <p className="text-sm text-slate-500 mb-3">This records a payment received outside BillSync. No card is charged and no funds are transferred.</p>
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
         {/* Customer & Invoice Selection */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -167,7 +168,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
             <label className="block text-slate-700 font-semibold mb-1">
               Customer Organization <span className="text-rose-500">*</span>
             </label>
-            <select
+            <select aria-label="Customer Organization"
               value={customerId}
               onChange={(e) => handleCustomerChange(e.target.value)}
               className="w-full px-2.5 py-2 border border-slate-300 rounded-lg bg-white outline-none"
@@ -182,7 +183,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Target Invoice</label>
-            <select
+            <select aria-label="Target Invoice"
               value={invoiceId}
               onChange={(e) => handleInvoiceChange(e.target.value)}
               className="w-full px-2.5 py-2 border border-slate-300 rounded-lg bg-white outline-none"
@@ -190,7 +191,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               <option value="">Select Invoice...</option>
               {availableInvoices.map((i) => (
                 <option key={i.id} value={i.id}>
-                  {i.invoiceNumber} (${(i.totalAmount - i.paidAmount).toFixed(2)} due)
+                  {i.invoiceNumber} ({formatMoney((i.totalAmount - i.paidAmount),'INR')} due)
                 </option>
               ))}
             </select>
@@ -201,9 +202,9 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-slate-700 font-semibold mb-1">
-              Payment Amount ($ USD) <span className="text-rose-500">*</span>
+              Payment Amount (INR) <span className="text-rose-500">*</span>
             </label>
-            <input
+            <input aria-label="Payment Amount (INR)"
               type="number"
               step="0.01"
               value={amount}
@@ -215,7 +216,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Payment Date</label>
-            <input
+            <input aria-label="Payment Date"
               type="date"
               value={paymentDate}
               onChange={(e) => setPaymentDate(e.target.value)}
@@ -261,7 +262,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
             <label className="block text-slate-700 font-semibold mb-1">
               Gateway Reference / Authorization #
             </label>
-            <input
+            <input aria-label="Gateway Reference / Authorization #"
               type="text"
               value={referenceNumber}
               onChange={(e) => setReferenceNumber(e.target.value)}
@@ -271,7 +272,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Notes / Ledger Remarks</label>
-            <input
+            <input aria-label="Notes / Ledger Remarks"
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}

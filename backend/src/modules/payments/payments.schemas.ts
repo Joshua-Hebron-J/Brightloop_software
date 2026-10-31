@@ -13,7 +13,7 @@ export const recordPaymentSchema = z.object({
   invoiceId: z.string().optional().nullable(),
   customerId: z.string().min(1, 'Customer ID is required'),
   amount: z.number().positive('Payment amount must be greater than 0'),
-  currency: z.string().default('USD'),
+  currency: z.enum(['INR','USD','EUR','GBP']).optional(),
   paymentDate: z.string().optional(),
   paymentMethod: paymentMethodEnum,
   transactionReference: z.string().optional().nullable(),

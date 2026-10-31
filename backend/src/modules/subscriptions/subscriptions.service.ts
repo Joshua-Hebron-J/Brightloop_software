@@ -1,3 +1,5 @@
+import {priceLines,minor,major,rateAmount} from '../../../shared/money';
+import {saveInvoiceGst,configuredRate} from '../official/gst';
 import { checkPlan } from '../official/policy';
 import { getDb } from '../../database/db';
 import { HttpError } from '../../middlewares/errorHandler';
@@ -140,6 +142,7 @@ export class SubscriptionsService {
       throw new HttpError(404, 'Subscription plan not found', 'PLAN_NOT_FOUND');
     }
 
+    if(plan.currency!==customer.currency)throw new HttpError(400,'Customer and plan currencies must match','CURRENCY_MISMATCH');
     const subId = generateId('sub');
     const subNumber = generateFormattedNumber('SUB');
     const now = new Date();
@@ -336,6 +339,7 @@ export class SubscriptionsService {
       throw new HttpError(404, 'New subscription plan not found', 'PLAN_NOT_FOUND');
     }
 
+    if(newPlan.currency!==sub.currency)throw new HttpError(400,'Cannot change subscription currency','CURRENCY_MISMATCH');
     const now = new Date();
     const periodStart = new Date(sub.current_period_start);
     const periodEnd = new Date(sub.current_period_end);
@@ -347,13 +351,13 @@ export class SubscriptionsService {
     try {
       if (applyProration && sub.status === 'ACTIVE') {
         const frequencies:any={DAILY:365,WEEKLY:52,MONTHLY:12,QUARTERLY:4,SEMI_ANNUALLY:2,ANNUALLY:1};
-        const base:any=db.prepare('SELECT coalesce(sum(quantity),1) quantity FROM subscription_items WHERE subscription_id=? AND is_base=1').get(id);
+        const base:any=db.prepare('SELECT coalesce(sum(quantity),1) quantity, coalesce(max(discount_percent),0) discount_percent FROM subscription_items WHERE subscription_id=? AND is_base=1').get(id);
         prorationResult = calculateProration(
           periodStart,
           periodEnd,
           now,
-          oldPlan.price*base.quantity,
-          newPlan.price*base.quantity*frequencies[newPlan.billing_frequency]/frequencies[oldPlan.billing_frequency]
+          major(minor(oldPlan.price)*base.quantity-rateAmount(minor(oldPlan.price)*base.quantity,base.discount_percent)),
+          major(minor(newPlan.price)*base.quantity-rateAmount(minor(newPlan.price)*base.quantity,base.discount_percent))*frequencies[newPlan.billing_frequency]/frequencies[oldPlan.billing_frequency]
         );
 
         if (prorationResult.netProration > 0 && generateInvoice) {
@@ -361,6 +365,8 @@ export class SubscriptionsService {
           const invId = generateId('inv');
           const invNumber = generateFormattedNumber('INV');
           const dueDate = new Date(now.getTime() + 15 * 86400000).toISOString();
+          const taxRate=newPlan.currency==='INR'?configuredRate(newPlan.product_id,newPlan.currency,0):0;
+          const priced=priceLines([{quantity:1,unitPrice:prorationResult.netProration,taxRatePercent:taxRate}]);
 
           db.prepare(`
             INSERT INTO invoices (
@@ -396,7 +402,10 @@ export class SubscriptionsService {
             prorationResult.netProration
           );
 
-          createdInvoice = { id: invId, invoiceNumber: invNumber, amount: prorationResult.netProration };
+          db.prepare('UPDATE invoice_items SET tax_rate_percent=?,tax_amount=? WHERE invoice_id=?').run(taxRate,priced.tax,invId);
+          db.prepare('UPDATE invoices SET tax_rate_percent=?,tax_amount=?,total_amount=?,balance_due=? WHERE id=?').run(taxRate,priced.tax,priced.total,priced.total,invId);
+          saveInvoiceGst(invId);
+          createdInvoice = { id: invId, invoiceNumber: invNumber, amount: priced.total };
         } else if (prorationResult.netProration < 0) {
           // Customer downgraded - credit customer balance with difference
           const creditAmount = Math.abs(prorationResult.netProration);

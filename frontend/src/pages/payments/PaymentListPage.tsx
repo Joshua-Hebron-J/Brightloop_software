@@ -1,3 +1,5 @@
+import {Modal} from '../../components/common/Modal';
+import {formatMoney,formatDate} from '../../utils/format';
 import {ListPager} from '../../components/common/ListPager';
 import React, { useEffect, useState } from 'react';
 import {
@@ -22,8 +24,10 @@ import { useAuth } from '../../context/AuthContext';
 export const PaymentListPage: React.FC = () => {
   const { showToast } = useToast();
   const { role, user } = useAuth();
+  const [ledgerAction,setLedgerAction]=useState<{kind:'refund'|'credit';id:string;label:string}|null>(null),[ledgerValue,setLedgerValue]=useState(''),[ledgerBusy,setLedgerBusy]=useState(false);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const[currencyFilter,setCurrencyFilter]=useState('INR');
   const [page,setPage]=useState(1),[total,setTotal]=useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,8 +48,8 @@ export const PaymentListPage: React.FC = () => {
         setPayments(payRes.data.filter((p) => p.customerId === custId));
         setInvoices(invRes.data.filter((i) => i.customerId === custId));
       } else {
-        setPayments(payRes.data);
-        setInvoices(invRes.data);
+        setPayments(payRes.data.filter(p=>p.currency===currencyFilter));
+        setInvoices(invRes.data.filter(i=>i.currency===currencyFilter));
       }
     } catch {
       showToast('error', 'Error', 'Failed to load payments and billing balances');
@@ -56,15 +60,15 @@ export const PaymentListPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [role, user,page]);
+  }, [role, user,page,currencyFilter]);
 
   // 4 Mandatory Calculations:
   // - Paid Amount
   // - Unpaid Amount
   // - Overdue Amount
   // - Outstanding Balance
-  const paidAmount = payments.reduce((sum, p) => sum + p.amount, 0);
-  const unpaidInvoices = invoices.filter((i) => i.status !== 'Paid');
+  const paidAmount = payments.filter(p=>p.status==='Completed'&&!p.referenceNumber.startsWith('credit_deduction_')).reduce((sum,p)=>sum+p.amount,0);
+  const unpaidInvoices = invoices.filter(i=>['Confirmed','Partial'].includes(i.status));
   const unpaidAmount = unpaidInvoices.reduce(
     (sum, i) => sum + (i.totalAmount - i.paidAmount),
     0
@@ -86,8 +90,9 @@ export const PaymentListPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {role!=='customer'&&<section className="bg-white border rounded-xl p-4 space-y-2"><h3 className="font-semibold">Reconciliation & credits</h3>{payments.filter(p=>p.status==='Completed').slice(0,8).map(p=><p key={p.id} className="text-sm flex justify-between gap-2"><span>{p.paymentNumber} · {p.referenceNumber} · {p.amount.toFixed(2)}</span><button className="text-rose-600" onClick={async()=>{const reason=prompt('Reason for recording a full refund (no money is transferred):');if(!reason)return;try{await paymentsApi.refund(p.id,reason);loadData()}catch(e){showToast('error','Refund failed',String(e))}}}>Record refund</button></p>)}{invoices.filter(i=>['Confirmed','Partial'].includes(i.status)).slice(0,8).map(i=><p key={i.id} className="flex justify-between text-sm"><span>{i.invoiceNumber} · Balance {(i.totalAmount-i.paidAmount).toFixed(2)}</span><button className="text-blue-600" onClick={async()=>{const amount=Number(prompt('Credit amount to apply:'));if(!amount)return;try{await paymentsApi.applyCredit(i.id,amount);loadData()}catch(e){showToast('error','Credit application failed',String(e))}}}>Apply customer credit</button></p>)}</section>}
+      {role!=='customer'&&<section className="bg-white border rounded-xl p-4 space-y-2"><h3 className="font-semibold">Reconciliation & credits</h3>{payments.filter(p=>p.status==='Completed'&&!p.referenceNumber.startsWith('credit_deduction_')).slice(0,8).map(p=><p key={p.id} className="text-sm flex justify-between gap-2"><span>{p.paymentNumber} · {p.referenceNumber} · {p.amount.toFixed(2)}</span><button className="text-rose-600" onClick={()=>{setLedgerValue('');setLedgerAction({kind:'refund',id:p.id,label:p.paymentNumber})}}>Record refund</button></p>)}{invoices.filter(i=>['Confirmed','Partial'].includes(i.status)).slice(0,8).map(i=><p key={i.id} className="flex justify-between text-sm"><span>{i.invoiceNumber} · Balance {(i.totalAmount-i.paidAmount).toFixed(2)}</span><button className="text-blue-600" onClick={()=>{setLedgerValue('');setLedgerAction({kind:'credit',id:i.id,label:i.invoiceNumber})}}>Apply customer credit</button></p>)}</section>}
 
+      {role!=='customer'&&<label className="text-sm">Payment currency <select aria-label="Payment currency filter" className="border rounded-lg p-2" value={currencyFilter} onChange={e=>setCurrencyFilter(e.target.value)}><option>INR</option><option>USD</option><option>EUR</option><option>GBP</option></select></label>}
       <ListPager page={page} total={total} onChange={setPage}/>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -115,28 +120,28 @@ export const PaymentListPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Paid Amount"
-          value={`$${paidAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          value={formatMoney(paidAmount,currencyFilter)}
           subtitle="Settled collections"
           icon={CheckCircle2}
           accentColor="emerald"
         />
         <MetricCard
           title="Unpaid Amount"
-          value={`$${unpaidAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          value={formatMoney(unpaidAmount,currencyFilter)}
           subtitle="Issued billing awaiting payment"
           icon={Clock}
           accentColor="amber"
         />
         <MetricCard
           title="Overdue Amount"
-          value={`$${overdueAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          value={formatMoney(overdueAmount,currencyFilter)}
           subtitle="Past invoice due date"
           icon={AlertCircle}
           accentColor="rose"
         />
         <MetricCard
           title="Outstanding Balance"
-          value={`$${outstandingBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          value={formatMoney(outstandingBalance,currencyFilter)}
           subtitle="Net receivable portfolio"
           icon={DollarSign}
           accentColor="indigo"
@@ -219,9 +224,9 @@ export const PaymentListPage: React.FC = () => {
                     <td className="py-3.5 px-4 font-mono text-[11px] text-slate-500">
                       {p.referenceNumber}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600">{p.paymentDate}</td>
+                    <td className="py-3.5 px-4 text-slate-600">{formatDate(p.paymentDate)}</td>
                     <td className="py-3.5 px-4 font-bold text-emerald-600">
-                      ${p.amount.toFixed(2)}
+                      {formatMoney(p.amount,p.currency)}
                     </td>
                     <td className="py-3.5 px-4">
                       <StatusBadge status={p.status} size="sm" />
@@ -234,6 +239,7 @@ export const PaymentListPage: React.FC = () => {
         </div>
       )}
 
+      <Modal isOpen={!!ledgerAction} onClose={()=>setLedgerAction(null)} title={ledgerAction?.kind==='refund'?'Record full refund':'Apply customer credit'}><form className="space-y-4" onSubmit={async e=>{e.preventDefault();if(!ledgerAction)return;setLedgerBusy(true);try{if(ledgerAction.kind==='refund')await paymentsApi.refund(ledgerAction.id,ledgerValue);else await paymentsApi.applyCredit(ledgerAction.id,Number(ledgerValue));await loadData();setLedgerAction(null);showToast('success','Ledger updated','The saved balances have been refreshed.')}catch(e){showToast('error','Ledger action failed',String(e))}finally{setLedgerBusy(false)}}}><p>{ledgerAction?.label}. This records bookkeeping only; no money is transferred.</p><label>{ledgerAction?.kind==='refund'?'Refund reason':'Credit amount'}<input aria-label={ledgerAction?.kind==='refund'?'Refund reason':'Credit amount'} className="block w-full border rounded-lg p-2" required type={ledgerAction?.kind==='refund'?'text':'number'} min="0.01" step="0.01" value={ledgerValue} onChange={e=>setLedgerValue(e.target.value)}/></label><button className="bg-blue-600 text-white rounded-lg px-4 py-2" disabled={ledgerBusy}>Save ledger action</button></form></Modal>
       {/* Record Payment Modal */}
       <RecordPaymentModal
         isOpen={isRecordModalOpen}

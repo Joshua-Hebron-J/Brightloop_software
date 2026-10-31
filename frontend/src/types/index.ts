@@ -19,6 +19,8 @@ export interface ProductVariant {
 }
 
 export interface Product {
+  currency?:string;
+  gst?:any;
   id: string;
   name: string;
   description: string;
@@ -34,6 +36,8 @@ export interface Product {
 export type BillingFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface Plan {
+  currency?:string;
+  gst?:any;
   id: string;
   name: string;
   description: string;
@@ -63,6 +67,11 @@ export interface Customer {
   company: string;
   email: string;
   phone: string;
+  billingAddress?:any;
+  shippingAddress?:any;
+  paymentTermsDays?:number;
+  outstandingBalance?:number;
+  creditBalance?:number;
   address: string;
   taxId: string;
   currency: string;
@@ -88,6 +97,8 @@ export interface QuotationItem {
 }
 
 export interface Quotation {
+  currency?:string;
+  gst?:any;
   id: string;
   quotationNumber: string;
   customerId: string;
@@ -108,6 +119,8 @@ export interface Quotation {
 export type SubscriptionStatus = 'Draft' | 'Quotation' | 'Confirmed' | 'Active' | 'Closed' | 'Trial' | 'Paused';
 
 export interface Subscription {
+  currency?:string;
+  gst?:any;
   id: string;
   subscriptionNumber: string;
   customerId: string;
@@ -144,6 +157,8 @@ export interface InvoiceLineItem {
 }
 
 export interface Invoice {
+  currency?:string;
+  gst?:any;
   id: string;
   invoiceNumber: string;
   subscriptionId?: string;
@@ -175,6 +190,8 @@ export interface Invoice {
 export type PaymentMethod = 'Cash' | 'Card' | 'Bank Transfer' | 'UPI';
 
 export interface Payment {
+  currency?:string;
+  gst?:any;
   id: string;
   paymentNumber: string;
   customerId: string;

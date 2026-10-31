@@ -1,3 +1,5 @@
+import {priceLines,formatMoney,formatDate} from '../../../shared/money';
+import {saveInvoiceGst,configuredRate} from '../official/gst';
 const escapeHtml=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 function safeHtml<T>(v:T):T {if(typeof v==='string')return escapeHtml(v) as T;if(Array.isArray(v))return v.map(safeHtml) as T;if(v&&typeof v==='object')return Object.fromEntries(Object.entries(v).map(([k,x])=>[k,safeHtml(x)])) as T;return v}
 import { getDb } from '../../database/db';
@@ -124,7 +126,7 @@ export class InvoicesService {
     }[];
   }): Invoice {
     const db = getDb();
-    const customer = db.prepare('SELECT id, payment_terms_days FROM customers WHERE id = ?').get(data.customerId) as any;
+    const customer = db.prepare('SELECT id, payment_terms_days, currency FROM customers WHERE id = ?').get(data.customerId) as any;
     if (!customer) {
       throw new HttpError(404, 'Customer not found', 'CUSTOMER_NOT_FOUND');
     }
@@ -136,7 +138,8 @@ export class InvoicesService {
     const paymentTerms = customer.payment_terms_days ?? 30;
     const dueDate = data.dueDate ? new Date(data.dueDate) : new Date(issueDate.getTime() + paymentTerms * 86400000);
 
-    const currency = data.currency || 'USD';
+    const currency = data.currency || customer.currency || 'INR';
+    if(currency!==customer.currency)throw new HttpError(400,'Invoice currency must match customer','CURRENCY_MISMATCH');
     const discountType: DiscountType = data.discountType || 'PERCENTAGE';
     const discountValue = data.discountValue || 0;
     const taxType: TaxType = data.taxType || 'SALES_TAX';
@@ -188,7 +191,12 @@ export class InvoicesService {
     }
     discountAmount = Number(discountAmount.toFixed(2));
 
-    const totalAmount = Number(Math.max(0, subtotal - discountAmount + totalTax).toFixed(2));
+    let totalAmount = Number(Math.max(0, subtotal - discountAmount + totalTax).toFixed(2));
+    if(currency==='INR'){
+      const priced=priceLines(data.items.map(i=>({...i,taxRatePercent:configuredRate(undefined,currency,i.taxRatePercent||0)})),discountType,discountValue);
+      subtotal=priced.subtotal;discountAmount=priced.discount;totalTax=priced.tax;totalAmount=priced.total;
+      processedItems.forEach((i,index)=>{i.amount=priced.lines[index].amount;i.taxRatePercent=priced.lines[index].taxRatePercent||0;i.taxAmount=priced.lines[index].taxAmount});
+    }
     const balanceDue = totalAmount;
 
     db.exec('BEGIN TRANSACTION;');
@@ -243,6 +251,7 @@ export class InvoicesService {
         );
       }
 
+      saveInvoiceGst(id);
       db.exec('COMMIT;');
       return this.getInvoiceById(id);
     } catch (err) {
@@ -290,153 +299,18 @@ export class InvoicesService {
 
     billingAddr=safeHtml(billingAddr);
     if(customer)for(const key of ['company_name','first_name','last_name','email'])if(customer[key])customer[key]=escapeHtml(customer[key]);
-    const lineRows = invoice.items
-      .map(
-        (item) => `
-        <tr>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; color: #1e293b;">
-            ${item.description}
-          </td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; color: #475569; text-align: right;">
-            ${item.quantity}
-          </td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; color: #475569; text-align: right;">
-            $${item.unitPrice.toFixed(2)}
-          </td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; color: #475569; text-align: right;">
-            ${item.taxRatePercent > 0 ? `${item.taxRatePercent}%` : '-'}
-          </td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; color: #0f172a; text-align: right; font-weight: 600;">
-            $${item.amount.toFixed(2)}
-          </td>
-        </tr>`
-      )
-      .join('');
-
-    const statusBadgeColors: Record<string, { bg: string; text: string }> = {
-      PAID: { bg: '#dcfce7', text: '#15803d' },
-      OPEN: { bg: '#e0f2fe', text: '#0369a1' },
-      PARTIALLY_PAID: { bg: '#fef3c7', text: '#b45309' },
-      VOID: { bg: '#f1f5f9', text: '#64748b' },
-      UNCOLLECTIBLE: { bg: '#fee2e2', text: '#b91c1c' },
-      DRAFT: { bg: '#f3e8ff', text: '#7e22ce' },
-    };
-
-    const badge = statusBadgeColors[invoice.status] || { bg: '#e2e8f0', text: '#334155' };
-
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Invoice ${invoice.invoiceNumber} - Brightloop</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 40px; }
-    .invoice-card { max-width: 800px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); padding: 48px; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #f1f5f9; padding-bottom: 32px; }
-    .logo { font-size: 26px; font-weight: 800; color: #2563eb; letter-spacing: -0.5px; }
-    .badge { display: inline-block; padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 700; text-transform: uppercase; background: ${badge.bg}; color: ${badge.text}; }
-    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 32px; }
-    .meta-box h4 { margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase; color: #64748b; font-weight: 600; }
-    .meta-box p { margin: 0; font-size: 14px; line-height: 1.6; color: #334155; }
-    table { width: 100%; border-collapse: collapse; margin-top: 36px; }
-    th { padding: 12px 14px; background: #f8fafc; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; }
-    .totals { margin-top: 24px; display: flex; justify-content: flex-end; }
-    .totals-table { width: 320px; }
-    .totals-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; color: #475569; }
-    .totals-row.grand-total { border-top: 2px solid #0f172a; padding-top: 12px; font-size: 18px; font-weight: 800; color: #0f172a; }
-  </style>
-</head>
-<body>
-  <div class="invoice-card">
-    <div class="header">
-      <div>
-        <div class="logo">Brightloop</div>
-        <div style="color: #64748b; font-size: 13px; margin-top: 4px;">Next-Gen B2B Revenue Orchestration</div>
-      </div>
-      <div style="text-align: right;">
-        <span class="badge">${invoice.status}</span>
-        <h2 style="margin: 12px 0 0 0; color: #0f172a; font-size: 20px;">${invoice.invoiceNumber}</h2>
-      </div>
-    </div>
-
-    <div class="details-grid">
-      <div class="meta-box">
-        <h4>Billed To</h4>
-        <p>
-          <strong>${customer?.company_name || `${customer?.first_name} ${customer?.last_name}`}</strong><br>
-          ${billingAddr.line1 || ''}<br>
-          ${billingAddr.city ? `${billingAddr.city}, ` : ''}${billingAddr.state || ''} ${billingAddr.postalCode || ''}<br>
-          ${billingAddr.country || ''}<br>
-          ${customer?.email || ''}
-        </p>
-      </div>
-      <div class="meta-box" style="text-align: right;">
-        <h4>Invoice Details</h4>
-        <p>
-          <strong>Issue Date:</strong> ${invoice.issueDate.substring(0, 10)}<br>
-          <strong>Due Date:</strong> ${invoice.dueDate.substring(0, 10)}<br>
-          ${invoice.paidDate ? `<strong>Paid Date:</strong> ${invoice.paidDate.substring(0, 10)}<br>` : ''}
-          <strong>Currency:</strong> ${invoice.currency}
-        </p>
-      </div>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th style="text-align: left;">Item & Description</th>
-          <th style="text-align: right;">Qty</th>
-          <th style="text-align: right;">Price</th>
-          <th style="text-align: right;">Tax</th>
-          <th style="text-align: right;">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${lineRows}
-      </tbody>
-    </table>
-
-    <div class="totals">
-      <div class="totals-table">
-        <div class="totals-row">
-          <span>Subtotal</span>
-          <span>$${invoice.subtotal.toFixed(2)}</span>
-        </div>
-        ${
-          invoice.discountAmount > 0
-            ? `<div class="totals-row" style="color: #16a34a;">
-                <span>Discount (${invoice.discountType === 'PERCENTAGE' ? `${invoice.discountValue}%` : 'Fixed'})</span>
-                <span>-$${invoice.discountAmount.toFixed(2)}</span>
-              </div>`
-            : ''
-        }
-        <div class="totals-row">
-          <span>Taxes (${invoice.taxType})</span>
-          <span>$${invoice.taxAmount.toFixed(2)}</span>
-        </div>
-        <div class="totals-row grand-total">
-          <span>Total Amount</span>
-          <span>$${invoice.totalAmount.toFixed(2)}</span>
-        </div>
-        <div class="totals-row" style="font-weight: 600; color: #2563eb; padding-top: 8px;">
-          <span>Amount Paid</span>
-          <span>$${invoice.amountPaid.toFixed(2)}</span>
-        </div>
-        <div class="totals-row" style="font-weight: 700; color: ${invoice.balanceDue > 0 ? '#dc2626' : '#16a34a'};">
-          <span>Balance Due</span>
-          <span>$${invoice.balanceDue.toFixed(2)}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</body>
-</html>`;
+    const money=(value:number)=>formatMoney(value,invoice.currency);
+    const gst=(invoice as any).gst;
+    const rows=invoice.items.map(item=>`<tr><td>${item.description}</td><td>${item.quantity}</td><td>${money(item.unitPrice)}</td><td>${item.taxRatePercent}%</td><td>${money(item.amount)}</td></tr>`).join('');
+    const totals=[['Subtotal',invoice.subtotal],['Discount',-invoice.discountAmount],['Taxable value',invoice.subtotal-invoice.discountAmount],...(gst?[['CGST',gst.cgst],['SGST',gst.sgst],['IGST',gst.igst]]:[['Tax',invoice.taxAmount]]),['Total',invoice.totalAmount],['Paid',invoice.amountPaid],['Balance due',invoice.balanceDue]];
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Invoice ${invoice.invoiceNumber} - BillSync</title><style>body{font:14px system-ui;color:#0f172a;max-width:850px;margin:40px auto;padding:24px}header{border-bottom:3px solid #7c3aed;display:flex;justify-content:space-between}table{width:100%;border-collapse:collapse;margin:24px 0}th,td{text-align:right;padding:12px;border-bottom:1px solid #ddd}th:first-child,td:first-child{text-align:left}.totals{margin-left:auto;max-width:340px}.totals p{display:flex;justify-content:space-between}@media print{body{margin:0}}</style></head><body><header><div><h1>BillSync</h1><p>Every bill. Every cycle. In sync.</p>${gst?`<p>${gst.supplier.name}<br>${gst.supplier.address}<br>Supplier state: ${gst.supplier.stateCode}<br>GSTIN: ${gst.supplier.gstin}</p>`:''}</div><div><h2>${gst?'GST INVOICE':'INVOICE'}</h2><p>${invoice.invoiceNumber} / ${invoice.status}</p><p>Issued ${formatDate(invoice.issueDate)}<br>Due ${formatDate(invoice.dueDate)}<br>Currency ${invoice.currency}</p></div></header><h3>BILL TO</h3><p>${gst?.customer.name||customer?.company_name||customer?.first_name||''}<br>${billingAddr.line1||''}<br>${billingAddr.city||''} ${billingAddr.postalCode||''}<br>${gst?`Customer GSTIN: ${gst.customer.gstin}<br>Place of supply: ${gst.placeOfSupplyName} (${gst.placeOfSupply})`:''}</p><table><thead><tr><th>Description</th><th>Qty</th><th>Unit price</th><th>Tax %</th><th>Taxable value</th></tr></thead><tbody>${rows}</tbody></table><div class="totals">${totals.map(([label,value])=>`<p><span>${label}</span><strong>${money(Number(value))}</strong></p>`).join('')}</div><p>${invoice.notes||''}</p><footer>Demo billing document. DEMO-prefixed GST identifiers are fictional. No statutory filing or e-invoice certification is claimed.</footer></body></html>`;
   }
 
   private static mapInvoice(row: any): Omit<Invoice, 'items'> {
     return {
       ...({customerName:row.company_name || [row.first_name,row.last_name].filter(Boolean).join(' '),customerEmail:row.customer_email,planName:row.plan_name,billingFrequency:row.billing_frequency,invoiceNumber:row.invoice_number} as any),
       id: row.id,
+      ...({gst:row.gst_snapshot?JSON.parse(row.gst_snapshot):null} as any),
       invoiceNumber: row.invoice_number,
       customerId: row.customer_id,
       subscriptionId: row.subscription_id,

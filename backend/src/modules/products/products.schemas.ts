@@ -14,6 +14,7 @@ export const createVariantSchema = z.object({
 export const updateVariantSchema = createVariantSchema.partial();
 
 export const createProductSchema = z.object({
+  currency:z.enum(['INR','USD','EUR','GBP']).default('INR'),
   productType:z.string().default("Software"),
   salesPrice:z.number().nonnegative().default(0),
   costPrice:z.number().nonnegative().default(0),

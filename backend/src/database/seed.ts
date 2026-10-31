@@ -1,3 +1,4 @@
+import {seedIndia} from './seedIndia';
 import bcrypt from 'bcryptjs';
 import { getDb } from './db';
 import { runMigrations } from './migrate';
@@ -406,6 +407,7 @@ export function seedDatabase(dbPath?: string): void {
   }
   const demoCustomer:any=db.prepare('SELECT id FROM customers ORDER BY id LIMIT 1').get();
   if(demoCustomer)db.prepare("INSERT OR IGNORE INTO users(id,email,password_hash,first_name,last_name,role,is_active,created_at,updated_at,customer_id) VALUES('usr_customer','customer@brightloop.io',?,'Casey','Demo','CUSTOMER',1,?,?,?)").run(passwordHash,now,now,demoCustomer.id);
+  seedIndia(passwordHash);
   console.log('Seed completed successfully!');
 }
 

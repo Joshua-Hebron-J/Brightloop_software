@@ -48,7 +48,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setPrice('49.00');
       setStatus('Active');
       setVariants([
-        { id: `var-${Date.now()}-1`, name: 'Standard Edition', sku: 'STD-01', price: 49.00, description: 'Core feature set' },
+        { id: `var-${Date.now()}-1`, name: 'Standard Edition', sku: 'STD-'+crypto.randomUUID().slice(0,8), price: 49.00, description: 'Core feature set' },
       ]);
     }
   }, [product, isOpen]);
@@ -96,6 +96,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           description,
           code,
           category,
+          currency:product?.currency||'INR',
           price: numPrice,
           costPrice:Number(costPrice),productType,
           status,
@@ -108,6 +109,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           description,
           code,
           category,
+          currency:'INR',
           price: numPrice,
           costPrice:Number(costPrice),productType,
           status,
@@ -141,11 +143,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             <label className="block text-slate-700 font-semibold mb-1">
               Product Name <span className="text-rose-500">*</span>
             </label>
-            <input
+            <input aria-label="Product name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. BrightFlow Engine"
+              placeholder="e.g. BillSync Engine"
               required
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-xs"
             />
@@ -155,7 +157,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             <label className="block text-slate-700 font-semibold mb-1">
               Product Code / SKU <span className="text-rose-500">*</span>
             </label>
-            <input
+            <input aria-label="Product Code / SKU"
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
@@ -168,7 +170,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
         <div>
           <label className="block text-slate-700 font-semibold mb-1">Description</label>
-          <textarea
+          <textarea aria-label="Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
@@ -180,7 +182,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Category</label>
-            <select
+            <select aria-label="Category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-xs bg-white"
@@ -194,9 +196,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1">
-              Base Price ($ USD) <span className="text-rose-500">*</span>
+              Base Price (INR) <span className="text-rose-500">*</span>
             </label>
-            <input
+            <input aria-label="Base Price (INR)"
               type="number"
               step="0.01"
               value={price}
@@ -209,7 +211,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1">Status</label>
-            <select
+            <select aria-label="Status"
               value={status}
               onChange={(e) => setStatus(e.target.value as Product['status'])}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-xs bg-white"
@@ -270,7 +272,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </div>
                   <div className="col-span-3">
                     <div className="relative">
-                      <span className="absolute left-2 top-1 text-slate-400">$</span>
+                      <span className="absolute left-2 top-1 text-slate-400">INR</span>
                       <input
                         type="number"
                         step="0.01"

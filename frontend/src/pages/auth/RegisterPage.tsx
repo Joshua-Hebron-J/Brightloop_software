@@ -1,3 +1,4 @@
+import {BillSyncLogo} from '../../components/common/BillSyncLogo';
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -40,13 +41,13 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateToLogin })
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 text-center">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-500/30 mb-4">
-          <Zap className="w-8 h-8 fill-current" />
+          <BillSyncLogo/>
         </div>
         <h2 className="text-3xl font-extrabold text-white tracking-tight">
           Create Account
         </h2>
         <p className="mt-1.5 text-sm text-slate-400">
-          Join Brightloop Subscription Management System
+          Join BillSync Subscription Management System
         </p>
       </div>
 

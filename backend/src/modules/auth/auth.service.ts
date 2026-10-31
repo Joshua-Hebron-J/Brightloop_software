@@ -47,7 +47,7 @@ export class AuthService {
     };
 
     if (role === 'CUSTOMER') {
-      const customer=CustomersService.createCustomer({type:'INDIVIDUAL',firstName:data.firstName,lastName:data.lastName,email:data.email,billingAddress:{line1:'Not provided',city:'Not provided',postalCode:'00000',country:'IN'}});
+      const customer=CustomersService.createCustomer({type:'INDIVIDUAL',firstName:data.firstName,lastName:data.lastName,email:data.email,billingAddress:{line1:'Not provided',city:'Not provided',postalCode:'600001',state:'33',country:'IN'}});
       db.prepare('UPDATE users SET customer_id=? WHERE id=?').run(customer.id,id);
     }
     const token = this.generateAccessToken(user);

@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import {ListPager} from '../../components/common/ListPager';
 import React, { useEffect, useState } from 'react';
 import {
@@ -62,7 +63,7 @@ export const PlanListPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Subscription Plans</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Configure recurring billing structures, cadences, renewal grace periods and pause rules
+            Configure recurring billing structures, cadences, renewal and pause permissions
           </p>
         </div>
         <button
@@ -137,7 +138,7 @@ export const PlanListPage: React.FC = () => {
                 <div className="flex items-start justify-between">
                   <div>
                     <span className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">
-                      {plan.productName || 'Brightloop Cloud'}
+                      {plan.productName || 'BillSync Cloud'}
                     </span>
                     <h3 className="text-base font-bold text-slate-900 mt-0.5">{plan.name}</h3>
                   </div>
@@ -149,7 +150,7 @@ export const PlanListPage: React.FC = () => {
                 {/* Price Display */}
                 <div className="mt-4 pb-4 border-b border-slate-100 flex items-baseline gap-1">
                   <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                    ${plan.price.toFixed(2)}
+                    {formatMoney(plan.price,plan.currency)}
                   </span>
                   <span className="text-xs font-medium text-slate-500 capitalize">
                     / {plan.billingFrequency}
@@ -162,7 +163,7 @@ export const PlanListPage: React.FC = () => {
                     <span className="text-slate-400 block text-[10px]">Pause Policy</span>
                     <span className="font-semibold text-slate-800">
                       {plan.pauseSettings?.allowPause
-                        ? `Up to ${plan.pauseSettings.maxPauseDays}d`
+                        ? 'Allowed'
                         : 'No Pause'}
                     </span>
                   </div>

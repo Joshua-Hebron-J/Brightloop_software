@@ -1,3 +1,4 @@
+import {BillSyncLogo} from '../common/BillSyncLogo';
 import React from 'react';
 import {
   LayoutDashboard,
@@ -142,12 +143,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex items-center justify-between h-16 px-4 border-b border-slate-800">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20 flex-shrink-0">
-              <Zap className="w-5 h-5 fill-current" />
+              <BillSyncLogo/>
             </div>
             {!isCollapsed && (
               <div className="flex flex-col min-w-0">
                 <span className="text-base font-bold text-white tracking-tight truncate">
-                  Brightloop
+                  BillSync
                 </span>
                 <span className="text-[10px] font-semibold tracking-wider uppercase text-blue-400">
                   Software

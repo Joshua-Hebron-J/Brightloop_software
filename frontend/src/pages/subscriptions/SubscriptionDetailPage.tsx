@@ -1,3 +1,4 @@
+import {formatMoney,formatDate} from '../../utils/format';
 import {AddonTools} from '../../components/common/AddonTools';
 import {SubscriptionTools} from '../../components/common/Operations';
 import React, { useState, useEffect } from 'react';
@@ -71,7 +72,7 @@ export const SubscriptionDetailPage: React.FC<SubscriptionDetailPageProps> = ({
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Account: <strong className="text-slate-800">{subscription.customerName}</strong> • Started on{' '}
-              {subscription.startDate}
+              {formatDate(subscription.startDate)}
             </p>
           </div>
 
@@ -146,7 +147,7 @@ export const SubscriptionDetailPage: React.FC<SubscriptionDetailPageProps> = ({
           <div>
             <span className="text-slate-400 block text-[11px] font-bold uppercase">Recurring Amount</span>
             <p className="font-bold text-slate-900 text-sm mt-0.5">
-              ${subscription.amount.toFixed(2)}
+              {formatMoney(subscription.amount,subscription.currency)}
             </p>
           </div>
         </div>
@@ -154,16 +155,16 @@ export const SubscriptionDetailPage: React.FC<SubscriptionDetailPageProps> = ({
         <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
           <div>
             <span className="text-slate-400 block text-[11px]">Start Date</span>
-            <span className="font-medium text-slate-800">{subscription.startDate}</span>
+            <span className="font-medium text-slate-800">{formatDate(subscription.startDate)}</span>
           </div>
           <div>
             <span className="text-slate-400 block text-[11px]">Next Billing Cycle</span>
-            <span className="font-medium text-slate-800">{subscription.nextBillingDate}</span>
+            <span className="font-medium text-slate-800">{formatDate(subscription.nextBillingDate)}</span>
           </div>
           <div>
             <span className="text-slate-400 block text-[11px]">Auto-Renew Policy</span>
             <span className="font-medium text-slate-800">
-              {subscription.autoRenew ? 'Enabled (Automatic)' : 'Manual Renewal'}
+              {subscription.autoRenew ? 'Enabled (Automatic)' : 'Cancellation scheduled at period end'}
             </span>
           </div>
           <div>
@@ -214,9 +215,9 @@ export const SubscriptionDetailPage: React.FC<SubscriptionDetailPageProps> = ({
                 {invoices.map((inv) => (
                   <tr key={inv.id}>
                     <td className="py-2.5 px-3 font-bold text-slate-900">{inv.invoiceNumber}</td>
-                    <td className="py-2.5 px-3 text-slate-600">{inv.invoiceDate}</td>
-                    <td className="py-2.5 px-3 text-slate-600">{inv.dueDate}</td>
-                    <td className="py-2.5 px-3 font-bold">${inv.totalAmount.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-slate-600">{formatDate(inv.invoiceDate)}</td>
+                    <td className="py-2.5 px-3 text-slate-600">{formatDate(inv.dueDate)}</td>
+                    <td className="py-2.5 px-3 font-bold">{formatMoney(inv.totalAmount,inv.currency)}</td>
                     <td className="py-2.5 px-3">
                       <StatusBadge status={inv.status} size="sm" />
                     </td>
