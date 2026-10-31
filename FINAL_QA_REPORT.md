@@ -1,3 +1,32 @@
+# Final release QA attempt - 31 October 2026
+
+## Release decision
+
+Verified local checkpoint; final browser acceptance remains blocked. Do not describe the release as fully browser-verified. No push attempted or authorized. No application code changed during this QA pass.
+
+## Fresh results
+
+- Running localhost4000 health endpoint: HTTP success, Brightloop Billing Engine status ok.
+- Real persistent-database API login: admin@brightloop.io ADMIN, billing@brightloop.io BILLING_MANAGER, customer@brightloop.io CUSTOMER all succeeded. These are API login checks, not fresh browser login checks.
+- Customer invoice list returned6 owned invoices and0 foreign-customer records. Customer internal financial-dashboard request rejected403. Automated direct-ID ownership tests also pass.
+- Persistent reference invoice INV-2026-219841 retrieved PAID, amountPaid2124, balanceDue0. Its previous browser-created quote/subscription/payment history survives the earlier restart; a new restart was not performed in this pass.
+- Protected printable HTML endpoint returned200 with CGST and Brightloop branding. OS print dialog/PDF output is unverified in this pass.
+- Live INR dashboard retrieved receipts11674.92, consistent with prior recorded core settlements. Later proration tests alter receivables/MRR; do not compare current values to the pre-plan-change snapshot blindly.
+- npm test rerun:54 passed,0 failed; process exit0. Includes product/plan/template/quote/subscription/billing/payment/report integration, role isolation, financial arithmetic, duplicate prevention, credit reversal and5000-subscription performance tests. Test DB is in-memory; it is distinct from live persistent API checks above.
+- Prior exact-source frontend/backend typechecks, lint and production build passed. No source changes in this QA pass required an affected rebuild. Build is not proof of browser correctness.
+
+## Browser blocker and unverified checks
+
+The in-app browser inventory found localhost4000, but binding the tab failed with `browser.user is unavailable`. Windows Computer Use fallback was then stopped because it could not reliably determine the current browser URL for policy enforcement. No further UI input was issued.
+
+Consequently fresh admin/staff/customer browser login, full browser product-to-cash repetition, refresh persistence, responsive navigation, OS invoice printing, browser console and failed-network inspection were not completed. Earlier actual browser evidence is retained below and must not be presented as a fresh final-release pass. No console/network-clean claim is made.
+
+## Submission state
+
+Branch main. Origin https://github.com/Joshua-Hebron-J/Subscription-Management-System-odooxkochi.git. Working tree was clean at start. This report and handoff are committed locally as the release-QA checkpoint; use git rev-parse HEAD for its SHA. Original history preserved, no force-push, no database deletion/reset. Remaining browser checks require restored automation or Joshua's manual verification before approval.
+
+---
+
 # Brightloop Software latest QA checkpoint
 
 31 October2026. Latest identity restored per the final master brief. No push authorized.

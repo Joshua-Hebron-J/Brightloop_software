@@ -1,3 +1,7 @@
+## Latest final-release QA attempt
+
+Fresh54/54 test pass; live persistent API admin/staff/customer login passed, customer list had0 foreign records and internal dashboard403, paid reference invoice2124/zero balance retrieved, printableHTML200 with GST/brand, live INR receipts11674.92. Final browser checks blocked: in-app binding unavailable, Windows fallback stopped because current URL could not be reliably identified. Responsive navigation, console/network, OS printing and fresh browser workflow remain unverified. No application code changed. See FINAL_QA_REPORT.md. No push authorized. Restore browser automation or manually complete the listed checks before final submission approval.
+
 # Brightloop Software - latest checkpoint
 
 The latest attached brief restores Brightloop Software as the final identity. Source UI, metadata, print templates and development messages now use Brightloop; navy/purple/teal and INR/GST remain. Package metadata is aligned. Migration007 updates only default supplier/catalog branding; historical invoice snapshots and saved account emails are preserved. README, USER_GUIDE and DEMO_SCRIPT now exist. Added a passing regression test for repeated credit allocations and credit reversal. Latest checks:54/54 tests, typechecks, lint and production builds pass. Migration007 applied successfully. Current browser automation is unavailable; no final-brand browser pass claimed. No push is authorized.
