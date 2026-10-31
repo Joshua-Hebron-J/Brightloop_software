@@ -1,3 +1,13 @@
+# Brightloop Software - latest checkpoint
+
+The latest attached brief restores Brightloop Software as the final identity. Source UI, metadata, print templates and development messages now use Brightloop; navy/purple/teal and INR/GST remain. Package metadata is aligned. Migration007 updates only default supplier/catalog branding; historical invoice snapshots and saved account emails are preserved. README, USER_GUIDE and DEMO_SCRIPT now exist. Added a passing regression test for repeated credit allocations and credit reversal. Latest checks:54/54 tests, typechecks, lint and production builds pass. Migration007 applied successfully. Current browser automation is unavailable; no final-brand browser pass claimed. No push is authorized.
+
+Remaining: full browser retest after rebranding; new refund/credit forms; variant-to-quotation selection and Odoo560 demonstration; representative INR performance dataset; responsive/portal/template/trial/setup checks; dependency audit remediation. The original checkpoint below records prior evidence, not a claim that all final-master requirements are verified.
+
+Exact resume commands remain below. Latest commit: run git rev-parse HEAD. Do not reset/delete data or force-push.
+
+---
+
 # BillSync progress handoff ? 31 October 2026
 
 ## Release control

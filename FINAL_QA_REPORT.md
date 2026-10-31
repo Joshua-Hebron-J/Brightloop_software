@@ -1,3 +1,19 @@
+# Brightloop Software latest QA checkpoint
+
+31 October2026. Latest identity restored per the final master brief. No push authorized.
+
+- Frontend/backend typechecks: passed.
+- ESLint: passed.
+- Automated tests:54 passed,0 failed, including new repeated-credit-allocation/reversal regression. Original50 remain covered; four India/credit tests extend coverage.
+- Production frontend/backend build: passed (Vite20.39s); Recharts546.59kB chunk warning remains.
+- Migration007: applied successfully to the persistent local database. It changes default branding only; historical invoice snapshots and financial values remain intact.
+- Local5000-subscription HTTP measurements: subscription page47.3ms, dashboard17.9ms, products7.2ms, plans6.1ms, customers7.1ms, quotes7.1ms, invoices9.5ms, payments8.5ms. These are local API results; representative INR aggregate/deployed browser performance remains unverified.
+- Existing browser evidence below remains valid for the prior core financial workflow. Current browser automation returned unavailable during the final-brand smoke check; no new browser pass is claimed.
+- README, USER_GUIDE and under-five-minute DEMO_SCRIPT are added/updated. REQUIREMENTS.md contains the official requirement matrix. Full scenario-by-scenario browser acceptance is still incomplete; do not claim100% compliance.
+- Remaining: latest refund/credit forms browser retest, full variant/template/portal/mobile checks, exact Odoo560 end-to-end demonstration, dependency audit remediation, broader negative tests and page-limited summaries. See PROGRESS_HANDOFF.md.
+
+## Earlier checkpoint evidence
+
 # BillSync QA checkpoint
 
 31 October 2026. Working milestone, not final release certification.

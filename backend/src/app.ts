@@ -28,7 +28,7 @@ export function createApp(): Express {
   app.get('/api/health', (_req, res) => {
     res.status(200).json({
       status: 'ok',
-      service: 'BillSync Billing Engine',
+      service: 'Brightloop Billing Engine',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),

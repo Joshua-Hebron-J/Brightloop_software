@@ -105,7 +105,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             Welcome back, {user?.name || 'Sarah Connor'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
-            Manage your BillSync cloud subscription, view itemized tax invoices, and review new proposal quotations.
+            Manage your Brightloop cloud subscription, view itemized tax invoices, and review new proposal quotations.
           </p>
         </div>
 

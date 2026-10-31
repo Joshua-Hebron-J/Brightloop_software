@@ -43,3 +43,15 @@ test('INR quote edit, interstate GST, recurring billing, partial/full settlement
  r=await call('get','/official/dashboard?currency=INR');assert.equal(r.body.data.currency,'INR');assert.ok(r.body.data.metrics.mrr>=1800);
  r=await call('get','/official/dashboard?currency=USD');assert.equal(r.body.data.currency,'USD');
 });
+
+test('Repeated credit applications and reversal conserve balances',async()=>{
+ const cid=await customer('33','CreditQA');let r=await call('post','/invoices',{customerId:cid,items:[{description:'Credit test',quantity:1,unitPrice:100,taxRatePercent:0}]});assert.equal(r.status,201);const iid=r.body.data.id;
+ await call('patch','/invoices/'+iid+'/status',{status:'OPEN'});
+ assert.equal((await call('post','/customers/'+cid+'/adjust-credit',{amount:100,reason:'QA credit'})).status,200);
+ r=await call('post','/payments/apply-credit',{invoiceId:iid,amount:20});assert.equal(r.status,200,JSON.stringify(r.body));const pid=r.body.data.payment.id;
+ r=await call('post','/payments/apply-credit',{invoiceId:iid,amount:30});assert.equal(r.status,200,JSON.stringify(r.body));assert.notEqual(r.body.data.payment.id,pid);
+ assert.equal((await call('post','/payments/'+pid+'/refund',{reason:'Reverse QA allocation'})).status,200);
+ r=await call('get','/customers/'+cid);assert.equal(r.body.data.creditBalance,70);
+ r=await call('get','/invoices/'+iid);assert.equal(r.body.data.amountPaid,30);assert.equal(r.body.data.balanceDue,70);
+ assert.equal((await call('post','/payments/'+pid+'/refund',{reason:'Duplicate'})).status,400);
+});

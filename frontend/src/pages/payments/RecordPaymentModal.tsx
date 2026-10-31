@@ -160,7 +160,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       description="Record incoming cash, credit card, bank wire, or UPI settlement against outstanding invoices"
       maxWidth="lg"
     >
-      <p className="text-sm text-slate-500 mb-3">This records a payment received outside BillSync. No card is charged and no funds are transferred.</p>
+      <p className="text-sm text-slate-500 mb-3">This records a payment received outside Brightloop. No card is charged and no funds are transferred.</p>
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
         {/* Customer & Invoice Selection */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

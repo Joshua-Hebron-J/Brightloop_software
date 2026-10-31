@@ -78,7 +78,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold uppercase tracking-wider border border-blue-500/30">
               Executive View
             </span>
-            <span className="text-xs text-slate-400">BillSync Software HQ</span>
+            <span className="text-xs text-slate-400">Brightloop Software HQ</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight mt-1.5">
             Platform Revenue & Subscription Overview

@@ -6,7 +6,7 @@ import { getDb } from './database/db';
 
 async function bootstrap() {
   try {
-    console.log('--- Initializing BillSync Platform Engine ---');
+    console.log('--- Initializing Brightloop Platform Engine ---');
     console.log(`Environment: ${ENV.NODE_ENV}`);
     console.log(`Database: ${ENV.DATABASE_PATH}`);
 
@@ -24,7 +24,7 @@ async function bootstrap() {
     const app = createApp();
 
     const server = app.listen(ENV.PORT, () => {
-      console.log(`BillSync server running on http://localhost:${ENV.PORT}`);
+      console.log(`Brightloop server running on http://localhost:${ENV.PORT}`);
       console.log(`Healthcheck: http://localhost:${ENV.PORT}/api/health`);
     });
 

@@ -25,7 +25,7 @@ describe('Brightloop Complete Backend Test Suite', () => {
     const res = await request(app).get('/api/health');
     assert.equal(res.status, 200);
     assert.equal(res.body.status, 'ok');
-    assert.equal(res.body.service, 'BillSync Billing Engine');
+    assert.equal(res.body.service, 'Brightloop Billing Engine');
   });
 
   // ==========================================
@@ -567,7 +567,7 @@ describe('Brightloop Complete Backend Test Suite', () => {
 
       assert.equal(res.status, 200);
       assert.ok(res.text.includes('<!DOCTYPE html>'));
-      assert.ok(res.text.includes('BillSync'));
+      assert.ok(res.text.includes('Brightloop'));
       assert.ok(res.text.includes('Architecture Review'));
     });
 

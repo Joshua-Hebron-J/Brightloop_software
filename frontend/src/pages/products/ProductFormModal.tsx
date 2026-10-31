@@ -147,7 +147,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. BillSync Engine"
+              placeholder="e.g. Brightloop Engine"
               required
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-xs"
             />

@@ -122,7 +122,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({
         allowClose,autoClose,currency,trialPeriodDays:Number(trial),setupFee:Number(setup),
         description,
         productId,
-        productName: selectedProduct?.name || 'BillSync Cloud Engine',
+        productName: selectedProduct?.name || 'Brightloop Cloud Engine',
         billingFrequency,
         price: numPrice,
         minimumQuantity: parseInt(minimumQuantity, 10) || 1,

@@ -30,7 +30,7 @@ export const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({
   const [items, setItems] = useState<InvoiceLineItem[]>([
     {
       id: `li-${Date.now()}`,
-      description: 'BillSync Cloud Platform — Monthly Enterprise Subscription',
+      description: 'Brightloop Cloud Platform — Monthly Enterprise Subscription',
       quantity: 1,
       unitPrice: 99.00,
       taxRate: 0,

@@ -1,2 +1,0 @@
-import React from 'react';
-export function BillSyncLogo({className='w-7 h-7'}:{className?:string}){return <svg viewBox="0 0 32 32" className={className} fill="none" aria-label="BillSync"><path d="M25 12a10 10 0 0 0-17-4L5 11m0-6v6h6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 20a10 10 0 0 0 17 4l3-3m0 6v-6h-6" stroke="#14B8A6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 11v10m4-10v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>}
